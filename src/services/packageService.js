@@ -2,9 +2,21 @@
  * Package Service for Travel Agency Management System (TAMS)
  * Handles API communication, response mapping, and isolated fallback data.
  */
-import { SAMPLE_PACKAGES } from '../data/packages';
+import { SAMPLE_PACKAGES } from '../data/packages.js';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Safe environment accessor working in both Vite and Node.js test environments
+const getEnv = (key) => {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[key];
+  }
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+  return undefined;
+};
+
+const API_BASE_URL = getEnv('VITE_API_URL') || '/api';
+const isDev = Boolean(getEnv('DEV') || (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production'));
 
 /**
  * Normalizes and safely maps API response fields to UI package format.
@@ -74,9 +86,9 @@ export function normalizePackage(raw) {
  */
 export async function getTravelPackages({ signal, forceMock = false } = {}) {
   // If explicitly requested to use mock data or configured via environment
-  if (forceMock || import.meta.env.VITE_USE_MOCK === 'true') {
+  if (forceMock || getEnv('VITE_USE_MOCK') === 'true') {
     // Simulate brief network latency for realistic loading experience
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await new Promise((resolve) => setTimeout(resolve, 50));
     return SAMPLE_PACKAGES.map(normalizePackage).filter(pkg => pkg && pkg.isActive);
   }
 
@@ -95,7 +107,7 @@ export async function getTravelPackages({ signal, forceMock = false } = {}) {
     if (!response.ok) {
       // If 404 or server error in local development where no backend process is bound,
       // fallback to mock data with a console notice so local reviewer has functional UI
-      if (response.status === 404) {
+      if (response.status === 404 && isDev) {
         console.warn(`[PackageService] Backend endpoint ${endpoint} returned 404. Falling back to isolated mock data.`);
         return SAMPLE_PACKAGES.map(normalizePackage).filter(pkg => pkg && pkg.isActive);
       }
@@ -129,7 +141,7 @@ export async function getTravelPackages({ signal, forceMock = false } = {}) {
     }
 
     // In local development when backend is not running, provide graceful fallback
-    if (import.meta.env.DEV && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+    if (isDev && (error.message.includes('Failed to fetch') || error.message.includes('fetch failed') || error.message.includes('NetworkError'))) {
       console.warn(`[PackageService] Cannot connect to ${endpoint}. Serving isolated sample dataset. (Set VITE_API_URL to point to a live backend)`);
       return SAMPLE_PACKAGES.map(normalizePackage).filter(pkg => pkg && pkg.isActive);
     }
