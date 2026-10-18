@@ -118,7 +118,7 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-7:** Browse Available Travel Packages (Package Listing UI)
 - [x] **TAMS-8:** Package Data Retrieval (Dynamic API, Loading, Error & Empty States)
 - [x] **TAMS-9:** Package Details & Detailed Itinerary View
-- [ ] **TAMS-10:** Destination Search & Budget Filtering
+- [x] **TAMS-10:** Destination Search & Budget Filtering
 - [ ] **TAMS-11:** Booking Request Submission
 - [ ] **TAMS-12:** Booking Status Tracking & Agent Decisions
 
