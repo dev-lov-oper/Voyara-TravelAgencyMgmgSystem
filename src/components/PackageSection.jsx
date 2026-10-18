@@ -10,10 +10,13 @@ export default function PackageSection({
   error = null,
   onRetry,
   onViewDetails,
-  showEmptyDemo = false,
-  onToggleDemo 
+  previewMode = 'normal', // 'normal' | 'empty' | 'error'
+  onChangePreviewMode 
 }) {
-  const displayPackages = showEmptyDemo ? [] : packages;
+  const isSimulatedError = previewMode === 'error';
+  const isSimulatedEmpty = previewMode === 'empty';
+  const effectiveError = isSimulatedError ? 'Simulated API network failure. (Click "Try Again" to verify recovery).' : error;
+  const displayPackages = isSimulatedEmpty ? [] : packages;
 
   return (
     <section id="packages-section" className="packages-section" aria-labelledby="packages-heading">
@@ -31,24 +34,32 @@ export default function PackageSection({
           </div>
 
           {/* Development / Reviewer preview toggle */}
-          {onToggleDemo && !isLoading && !error && (
+          {onChangePreviewMode && (
             <div className="state-toggle-control" aria-label="Reviewer Preview Controls">
               <span className="toggle-label">Preview State:</span>
               <button
                 type="button"
-                className={`toggle-pill ${!showEmptyDemo ? 'is-active' : ''}`}
-                onClick={() => onToggleDemo(false)}
-                aria-pressed={!showEmptyDemo}
+                className={`toggle-pill ${previewMode === 'normal' && !isLoading && !error ? 'is-active' : ''}`}
+                onClick={() => onChangePreviewMode('normal')}
+                aria-pressed={previewMode === 'normal'}
               >
                 Packages ({packages.length})
               </button>
               <button
                 type="button"
-                className={`toggle-pill ${showEmptyDemo ? 'is-active' : ''}`}
-                onClick={() => onToggleDemo(true)}
-                aria-pressed={showEmptyDemo}
+                className={`toggle-pill ${previewMode === 'empty' ? 'is-active' : ''}`}
+                onClick={() => onChangePreviewMode('empty')}
+                aria-pressed={previewMode === 'empty'}
               >
                 Empty State
+              </button>
+              <button
+                type="button"
+                className={`toggle-pill ${previewMode === 'error' ? 'is-active' : ''}`}
+                onClick={() => onChangePreviewMode('error')}
+                aria-pressed={previewMode === 'error'}
+              >
+                Error State
               </button>
             </div>
           )}
@@ -57,8 +68,14 @@ export default function PackageSection({
         {/* Dynamic State Rendering: Loading -> Error -> Empty -> List */}
         {isLoading ? (
           <LoadingSkeleton />
-        ) : error ? (
-          <ErrorState message={error} onRetry={onRetry} />
+        ) : effectiveError ? (
+          <ErrorState 
+            message={effectiveError} 
+            onRetry={() => {
+              if (onChangePreviewMode) onChangePreviewMode('normal');
+              if (onRetry) onRetry();
+            }} 
+          />
         ) : displayPackages && displayPackages.length > 0 ? (
           <div className="packages-grid" role="list" aria-label="Available Travel Packages">
             {displayPackages.map((pkg) => (
@@ -68,7 +85,12 @@ export default function PackageSection({
             ))}
           </div>
         ) : (
-          <EmptyState onReset={onToggleDemo ? () => onToggleDemo(false) : onRetry} />
+          <EmptyState 
+            onReset={() => {
+              if (onChangePreviewMode) onChangePreviewMode('normal');
+              if (onRetry) onRetry();
+            }} 
+          />
         )}
       </div>
     </section>

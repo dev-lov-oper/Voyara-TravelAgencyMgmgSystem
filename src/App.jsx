@@ -11,7 +11,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [showEmptyDemo, setShowEmptyDemo] = useState(false);
+  const [previewMode, setPreviewMode] = useState('normal'); // 'normal' | 'empty' | 'error'
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
@@ -42,6 +42,7 @@ export default function App() {
   const handleRetry = () => {
     setIsLoading(true);
     setError(null);
+    setPreviewMode('normal');
     setRetryKey((prev) => prev + 1);
   };
 
@@ -77,8 +78,8 @@ export default function App() {
           error={error}
           onRetry={handleRetry}
           onViewDetails={handleOpenDetails}
-          showEmptyDemo={showEmptyDemo}
-          onToggleDemo={setShowEmptyDemo}
+          previewMode={previewMode}
+          onChangePreviewMode={setPreviewMode}
         />
       </main>
 
