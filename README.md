@@ -1,124 +1,127 @@
-# Voyara-TravelAgencyMgmgSystem
+# Voyara — Travel Agency Management System (TAMS)
+
 An academic Jira and Agile project management learning exercise using a Travel Agency Management System as the application scenario.
+
+> **Project Type:** Academic Learning Project  
+> **Primary Focus:** Jira, Agile Workflows, Sprint Planning, and Task Management  
+> **Application Scenario:** Travel Agency Management System (`Voyara`)
+
+---
 
 ## Project Overview
 
-Travelers often need to browse multiple travel options and contact agents manually to understand package details and booking availability. TAMS aims to centralize this process through a structured platform for package discovery and booking management.
+Travelers often need to browse multiple travel options and contact agents manually to understand package details and booking availability. TAMS centralizes this discovery process through a structured, responsive platform for travel package exploration and booking workflows.
 
-## Objectives
+### Objectives
+- Display available travel packages in a clean, intuitive, and modern interface.
+- Help travelers compare destinations, durations, and transparent budgets.
+- Present package itineraries, pricing in Indian Rupees (`₹`), and key features.
+- Provide a robust foundation for booking submissions and status tracking.
+- Practice industry-standard Agile project management using Jira stories and sprints.
 
-- Display available travel packages in an organized interface.
-- Help users find destinations and compare package budgets.
-- Present package itineraries, duration, pricing, and inclusions.
-- Allow travelers to submit booking requests with their details.
-- Enable travelers to track booking status.
-- Allow agents to confirm or reject booking requests.
-- Provide a foundation for package administration and revenue reporting.
-- Learning JIRA as a tool for project mgmt with the help of this project
-## Core Modules
+---
 
-### 1. Package Discovery
-- Browse available travel packages.
-- Search packages by destination.
-- Filter packages using minimum and maximum budgets.
-- View package details, including itinerary, duration, price, and inclusions.
+## Features Implemented (Jira Story: TAMS-7)
 
-### 2. Booking Management
-- Submit booking requests with traveler details.
-- View booking status.
-- Allow agents to confirm or reject booking requests.
+### 1. Curated Package Listing UI
+- **Full-Width Immersive Experience:** Clean, modern travel aesthetic with warm off-white tones, deep navy typography, and restrained ocean teal/blue accents.
+- **Dynamic 3-Column Grid:** Responsive package cards spanning wide desktop viewports, 2-column tablet layout, and 1-column mobile stack.
+- **Package Details at a Glance:**
+  - High-resolution destination photography with graceful fallback handling.
+  - Destination name and duration pill tags.
+  - Indian Rupee (`₹`) formatted pricing per person.
+  - Accessible *View Details* preview dialog with keyboard `Escape` dismiss.
 
-### Planned Extensions
-- Payment processing and tracking.
-- Agent and package administration.
-- Administrative dashboard and revenue reports.
-- Functional testing and defect tracking.
+### 2. Dynamic Package Data Retrieval
+- **Centralized Service Layer (`src/services/packageService.js`):**
+  - Configurable API endpoint via `VITE_API_URL` (defaults to `/api`).
+  - Safe field normalization that prevents UI crashes if optional fields are missing or differently formatted in backend payloads.
+  - Support for `is_active` filtering so only active packages are displayed.
+  - Isolated sample dataset fallback for local development and reviewer previews.
+- **Asynchronous States:**
+  - **Loading State:** Shimmering skeleton cards (`LoadingSkeleton.jsx`) matching the card dimensions without layout shift.
+  - **Error State:** Clear error card (`ErrorState.jsx`) with a functional retry mechanism.
+  - **Empty State:** Distinct empty state (`EmptyState.jsx`) displaying *"No packages available right now."* with supporting information when 0 packages are active.
+  - **Reviewer State Toggle:** Interactive pill buttons to easily toggle between available packages and the empty state.
 
-> Implementation status: Features should be considered complete only after they have been implemented and verified in the application.
+---
 
 ## Technology Stack
-
-The exact stack depends on the existing codebase.
-
-- **Frontend:** To be documented based on the implemented project.
-- **Backend:** To be documented based on the implemented project.
-- **Database:** To be documented based on the implemented project.
+- **Frontend Framework:** React 19 + Vite 8
+- **Styling:** Pure Vanilla CSS with CSS Custom Properties, Flexbox, and CSS Grid
+- **Linter & Code Quality:** Oxlint (0 warnings, 0 errors)
+- **Version Control:** Git & GitHub
 - **Project Management:** Jira
-- **Version Control:** Git and GitHub
 
-Update this section with the actual technologies used by the project.
+---
 
 ## Getting Started
 
-### Prerequisites
-Install the tools required by your actual frontend and backend stack.
-
-### Installation
-1. Clone the repository:
-
-   ```bash
-   git clone <YOUR_GITHUB_REPOSITORY_URL>
-   cd travel-agency-management-system
-   ```
-
-2. Install dependencies using the package manager for your project.
-
-3. Configure required environment variables using the provided environment example, if applicable.
-
-4. Start the frontend and backend using the commands specified in their respective project configuration files.
-
-5. Open the local URL printed by the development server.
-
-> Setup commands and environment variables should be documented after verifying the actual project configuration.
-
-## Project Structure
-
-The structure below is illustrative. Adjust it to match the actual repository.
-
-```text
-travel-agency-management-system/
-├── frontend/
-│   ├── src/
-│   └── public/
-├── backend/
-├── README.md
-├── .gitignore
-└── .env.example
+### 1. Clone the Repository
+```bash
+git clone https://github.com/dev-lov-oper/Voyara-TravelAgencyMgmgSystem.git
+cd Voyara-TravelAgencyMgmgSystem
 ```
 
-## Project Management
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-Development tasks are tracked in Jira using epics, user stories, subtasks, and sprints.
+### 3. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-Current implementation focus:
-- Package listing UI
-- Package data retrieval
-- Package listing validation
-- Booking request submission
-- Booking status tracking
-- Agent booking decisions
+### 4. Production Build & Linting
+```bash
+# Run lint check
+npm run lint
 
-## Testing
+# Build production bundle
+npm run build
+```
 
-Testing should cover:
-- Successful package retrieval and rendering.
-- Destination search and budget filtering.
-- Package detail presentation.
-- Booking request validation and submission.
-- Booking status updates.
-- Agent confirmation and rejection.
-- Loading, empty, and error states.
+---
 
-Only report tests as passed after they have been executed.
+## Project Structure
+```text
+Voyara-TravelAgencyMgmgSystem/
+├── src/
+│   ├── components/
+│   │   ├── DetailsPlaceholderModal.jsx # Accessible preview dialog
+│   │   ├── EmptyState.jsx              # No packages empty state
+│   │   ├── ErrorState.jsx              # Error banner with retry
+│   │   ├── Footer.jsx                  # Site footer with brand info
+│   │   ├── HeroSection.jsx             # Welcoming hero & CTA
+│   │   ├── LoadingSkeleton.jsx         # Shimmering skeleton cards
+│   │   ├── Navbar.jsx                  # Header with desktop/mobile navigation
+│   │   ├── PackageCard.jsx             # Individual travel package card
+│   │   └── PackageSection.jsx          # Package listing section & grid
+│   ├── data/
+│   │   └── packages.js                 # Sample package dataset
+│   ├── services/
+│   │   └── packageService.js           # API retrieval & response normalization
+│   ├── App.jsx                         # Main application component
+│   ├── index.css                       # Full-width design system & styles
+│   └── main.jsx                        # Entry point
+├── index.html                          # HTML shell with Google Fonts & SEO tags
+├── package.json
+└── README.md
+```
 
-## Future Improvements
+---
 
-- Secure authentication and role-based access control.
-- Payment gateway integration.
-- Advanced package search and sorting.
-- Email or in-app booking notifications.
-- Administrative analytics and revenue reporting.
+## Project Management & Jira Roadmap
+Development tasks are tracked in Jira using epics, user stories, subtasks, and sprints:
+- [x] **TAMS-7:** Package Listing UI & Dynamic Data Retrieval
+- [ ] **TAMS-8:** Package Details & Detailed Itinerary View
+- [ ] **TAMS-9:** Destination Search & Budget Filtering
+- [ ] **TAMS-10:** Booking Request Submission
+- [ ] **TAMS-11:** Booking Status Tracking & Agent Decisions
 
-### Project Type: Academic Learning Project
-### Primary Focus: Jira, Agile Workflows, Sprint Planning, and Task Management
-Application Scenario: Travel Agency Management System
+---
+
+## License
+Private — Voyara Travel Agency Management System.
