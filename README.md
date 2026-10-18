@@ -116,7 +116,7 @@ Voyara-TravelAgencyMgmgSystem/
 ## Project Management & Jira Roadmap
 Development tasks are tracked in Jira using epics, user stories, subtasks, and sprints:
 - [x] **TAMS-7:** Package Listing UI & Dynamic Data Retrieval
-- [ ] **TAMS-8:** Package Details & Detailed Itinerary View
+- [x] **TAMS-8:** Package Details & Detailed Itinerary View
 - [ ] **TAMS-9:** Destination Search & Budget Filtering
 - [ ] **TAMS-10:** Booking Request Submission
 - [ ] **TAMS-11:** Booking Status Tracking & Agent Decisions
