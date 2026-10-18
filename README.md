@@ -1,5 +1,5 @@
 # Voyara-TravelAgencyMgmgSystem
-A web-based Travel Agency Management System for discovering travel packages, searching destinations, filtering by budget, submitting booking requests, and managing booking status.
+An academic Jira and Agile project management learning exercise using a Travel Agency Management System as the application scenario.
 
 ## Project Overview
 
