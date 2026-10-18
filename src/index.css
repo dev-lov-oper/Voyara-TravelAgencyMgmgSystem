@@ -640,6 +640,260 @@ button {
   outline-offset: 2px;
 }
 
+/* --------------------------------------------------------------------------
+   6c. Search & Budget Filter Toolbar (TAMS-10)
+   -------------------------------------------------------------------------- */
+.section-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.section-search-bar {
+  width: 100%;
+}
+
+.budget-filter-container {
+  width: 100%;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.budget-filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.budget-filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.budget-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+
+.budget-input-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-navy-800);
+  letter-spacing: -0.01em;
+}
+
+.budget-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.budget-input-wrapper:hover {
+  border-color: #cbd5e1;
+}
+
+.budget-input-wrapper:focus-within {
+  border-color: var(--color-accent-blue);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.budget-input-wrapper.has-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.budget-currency-prefix {
+  position: absolute;
+  left: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-navy-400);
+  pointer-events: none;
+}
+
+.budget-number-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 0.875rem 0 2.25rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-navy-950);
+  background: transparent;
+  border: none;
+  outline: none;
+  border-radius: var(--radius-md);
+}
+
+.budget-number-input::placeholder {
+  color: var(--color-navy-400);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+/* Remove default number spin buttons on WebKit & Firefox for cleaner travel app look */
+.budget-number-input::-webkit-outer-spin-button,
+.budget-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.budget-number-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.budget-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding-bottom: 1px;
+}
+
+.budget-btn {
+  height: 44px;
+  padding: 0 1.25rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.budget-btn-apply {
+  background-color: var(--color-navy-900);
+  color: #ffffff;
+  border: 1px solid var(--color-navy-900);
+  box-shadow: var(--shadow-xs);
+}
+
+.budget-btn-apply:hover {
+  background-color: var(--color-navy-800);
+  border-color: var(--color-navy-800);
+  box-shadow: var(--shadow-sm);
+}
+
+.budget-btn-apply:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+}
+
+.budget-btn-clear {
+  background-color: var(--color-bg-muted);
+  color: var(--color-navy-700);
+  border: 1px solid var(--color-border);
+}
+
+.budget-btn-clear:hover {
+  background-color: #e2e8f0;
+  color: var(--color-navy-900);
+}
+
+.budget-btn-clear:focus-visible {
+  outline: 2px solid var(--color-navy-500);
+  outline-offset: 2px;
+}
+
+.budget-filter-validation-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #dc2626;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding-top: 0.25rem;
+}
+
+/* Dynamic Filter Status Bar */
+.filter-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 2rem;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.filter-count {
+  font-weight: 600;
+  color: var(--color-navy-800);
+}
+
+.filter-active-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-navy-800);
+}
+
+.filter-pill-remove {
+  background: none;
+  border: none;
+  color: var(--color-navy-400);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.filter-pill-remove:hover {
+  color: #dc2626;
+}
+
+.filter-reset-link {
+  background: none;
+  border: none;
+  color: var(--color-accent-blue);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0.25rem 0.5rem;
+}
+
+.filter-reset-link:hover {
+  color: var(--color-navy-950);
+}
+
 /* Responsive Package Grid (3 cols desktop across full screen, 2 tablet, 1 mobile) */
 .packages-grid {
   display: grid;
@@ -1312,8 +1566,13 @@ button {
     margin-bottom: 2rem;
   }
 
-  .section-search-bar {
+  .section-toolbar {
+    gap: 1rem;
     margin-bottom: 1.75rem;
+  }
+
+  .section-search-bar {
+    margin-bottom: 0;
   }
 
   .destination-search-container {
@@ -1323,6 +1582,38 @@ button {
   .destination-search-input {
     height: 46px;
     font-size: 0.9375rem;
+  }
+
+  .budget-filter-container {
+    padding: 1rem;
+  }
+
+  .budget-filter-fields {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .budget-input-group {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .budget-filter-actions {
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .budget-btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .filter-status-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
 
   .packages-grid {

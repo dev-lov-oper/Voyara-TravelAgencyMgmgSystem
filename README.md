@@ -44,25 +44,32 @@ Travelers often need to browse multiple travel options and contact agents manual
   - **Empty State:** Distinct empty state (`EmptyState.jsx`) displaying *"No packages available right now."* with supporting information when 0 packages are active.
   - **Reviewer State Toggle:** Interactive pill buttons to easily toggle between available packages and the empty state.
 
-### 3. Destination Search Interface & Filtering (Jira Stories: TAMS-24 & TAMS-25)
-- **Search Interface (`DestinationSearch.jsx`):**
+### 3. Destination Search & Budget Filtering (Jira Stories: TAMS-24, TAMS-25 & TAMS-10)
+- **Destination Search (`DestinationSearch.jsx`):**
   - Search input with placeholder `"Search by destination..."`.
   - Accessible search icon and landmark `role="search"`.
   - Clear button (`×`) appears dynamically whenever text is entered.
   - Keyboard accessibility with `Escape` to clear search and screen-reader accessible label.
-- **Client-Side Search Logic (`PackageSection.jsx`):**
-  - Dynamic filtering as the user types without mutating original package data.
-  - Case-insensitive substring matching (e.g. searching `"man"` matches `"Manali"` and `"Andaman"`).
-  - Trims leading/trailing whitespace.
-  - When cleared, restores all active packages.
-  - Distinct empty state for search (`"No packages found for this destination."` + *"Clear Search"* action button) distinct from zero-package catalog state.
+  - Case-insensitive, whitespace-trimmed partial substring filtering.
+- **Budget Filtering (`BudgetFilter.jsx`):**
+  - Clear input fields: **"Minimum Budget (₹)"** and **"Maximum Budget (₹)"**.
+  - Non-negative numeric validation (`min="0"`).
+  - Validation: verifies that minimum budget does not exceed maximum budget (`"Minimum budget cannot exceed maximum budget."`).
+  - Action buttons: **"Apply Filters"** to apply criteria and **"Clear Filters"** to reset budget range.
+  - Inclusive boundary matching: correctly includes package prices equal to either boundary (`price >= min && price <= max`).
+- **Combined Search & Budget Logic (`PackageSection.jsx`):**
+  - Seamlessly combines destination query and budget criteria.
+  - Clearing budget filters preserves destination search query.
+  - Clearing destination search preserves active budget filters.
+  - Active filter tags and live match counter (`Showing X of Y packages`).
+  - Distinct empty states for no destination match, no budget match, combined filter mismatch, and empty catalog.
 
 ---
 
 ## Technology Stack
 - **Frontend Framework:** React 19 + Vite 8
 - **Styling:** Pure Vanilla CSS with CSS Custom Properties, Flexbox, and CSS Grid
-- **Testing:** Vitest (25 unit & integration tests)
+- **Testing:** Vitest (48 unit & integration tests)
 - **Linter & Code Quality:** Oxlint (0 warnings, 0 errors)
 - **Version Control:** Git & GitHub
 - **Project Management:** Jira
@@ -107,16 +114,17 @@ npm run build
 Voyara-TravelAgencyMgmgSystem/
 ├── src/
 │   ├── components/
+│   │   ├── BudgetFilter.jsx            # Min/max budget filter controls & validation
 │   │   ├── DestinationSearch.jsx       # Destination search bar with clear button
 │   │   ├── DetailsPlaceholderModal.jsx # Accessible preview dialog
-│   │   ├── EmptyState.jsx              # No packages empty state
+│   │   ├── EmptyState.jsx              # Distinct empty states for catalog/search/budget
 │   │   ├── ErrorState.jsx              # Error banner with retry
 │   │   ├── Footer.jsx                  # Site footer with brand info
 │   │   ├── HeroSection.jsx             # Welcoming hero & CTA
 │   │   ├── LoadingSkeleton.jsx         # Shimmering skeleton cards
 │   │   ├── Navbar.jsx                  # Header with desktop/mobile navigation
 │   │   ├── PackageCard.jsx             # Individual travel package card
-│   │   └── PackageSection.jsx          # Package listing section, search & grid
+│   │   └── PackageSection.jsx          # Package listing section, toolbar, search & grid
 │   ├── data/
 │   │   └── packages.js                 # Sample package dataset
 │   ├── services/
@@ -125,6 +133,7 @@ Voyara-TravelAgencyMgmgSystem/
 │   ├── index.css                       # Full-width design system & styles
 │   └── main.jsx                        # Entry point
 ├── tests/
+│   ├── budgetFilter.test.js            # TAMS-10 budget filter unit & integration tests
 │   ├── destinationSearch.test.js       # TAMS-24/TAMS-25 search interface & logic tests
 │   └── packageListing.test.js          # TAMS-7/TAMS-8 data retrieval & state tests
 ├── index.html                          # HTML shell with Google Fonts & SEO tags
