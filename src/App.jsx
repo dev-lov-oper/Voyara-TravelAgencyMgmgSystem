@@ -19,6 +19,26 @@ export default function App() {
     return null;
   });
 
+  const [searchQuery, setSearchQuery] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('search') || '';
+    }
+    return '';
+  });
+
+  const [appliedBudget, setAppliedBudget] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const minParam = params.get('minBudget');
+      const maxParam = params.get('maxBudget');
+      return {
+        min: minParam !== null && minParam !== '' ? Number(minParam) : null,
+        max: maxParam !== null && maxParam !== '' ? Number(maxParam) : null,
+      };
+    }
+    return { min: null, max: null };
+  });
+
   const [previewMode, setPreviewMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const param = new URLSearchParams(window.location.search).get('state');
@@ -117,6 +137,7 @@ export default function App() {
       <main id="main-content" className="main-content">
         {selectedPackageId ? (
           <PackageDetails
+            key={selectedPackageId || 'details'}
             pkg={selectedPackage}
             onBack={handleBackToListing}
             isLoading={isLoading}
@@ -137,6 +158,11 @@ export default function App() {
               onViewDetails={handleOpenDetails}
               previewMode={previewMode}
               onChangePreviewMode={setPreviewMode}
+              initialSearchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              initialMinBudget={appliedBudget.min}
+              initialMaxBudget={appliedBudget.max}
+              onBudgetChange={setAppliedBudget}
             />
           </>
         )}

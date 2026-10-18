@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 /**
- * PackageDetails Component (TAMS-11)
+ * PackageDetails Component (TAMS-11 & TAMS-31 & TAMS-32)
  * Renders full travel package details, including day-by-day itinerary,
  * inclusions, exclusions, and responsive breadcrumb/back navigation.
  *
@@ -19,7 +19,8 @@ export default function PackageDetails({
   error = null,
   onRetry,
 }) {
-  const [imageError, setImageError] = useState(false);
+  const [failedImageUrl, setFailedImageUrl] = useState(null);
+  const imageError = failedImageUrl === pkg?.imageUrl;
 
   // 1. Loading State
   if (isLoading) {
@@ -159,7 +160,7 @@ export default function PackageDetails({
                 src={pkg.imageUrl}
                 alt={pkg.imageAlt || `${title} in ${destination}`}
                 className="details-hero-image"
-                onError={() => setImageError(true)}
+                onError={() => setFailedImageUrl(pkg.imageUrl)}
               />
             ) : (
               <div className="details-image-fallback" role="img" aria-label={title}>
@@ -254,7 +255,7 @@ export default function PackageDetails({
                   {sortedItinerary.map((item, index) => {
                     const dayNum = item.day || index + 1;
                     return (
-                      <div key={dayNum} className="itinerary-item" role="listitem">
+                      <div key={item.id || `${dayNum}-${index}`} className="itinerary-item" role="listitem">
                         <div className="itinerary-day-indicator">
                           <span className="day-number">Day {dayNum}</span>
                         </div>

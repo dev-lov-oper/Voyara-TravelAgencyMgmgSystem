@@ -101,12 +101,26 @@ Travelers often need to browse multiple travel options and contact agents manual
   - Single-column stacked layout on mobile devices (`max-width: 640px`) and tablets (`max-width: 1024px`).
   - Consistent padding using `--screen-padding` token preventing layout clipping on smaller screens.
 
+### 6. Package Details and Retrieval Validation (Jira Story: TAMS-32)
+- **Data Association & Package Isolation:**
+  - Validated that `getPackageById` and package selection cleanly map package identifiers (`pkg-1`, `pkg-2`, `pkg-5`, `pkg-6`, etc.) to respective package information without cross-contamination.
+  - Verified each package displays its distinct title, destination, price, duration, description, itinerary, and inclusions.
+- **Defect Fixes & Improvements:**
+  - **Filter State Preservation:** Destination search query and applied budget filters now remain fully preserved in state when navigating from the package listing to package details and back via `"Back to Packages"`.
+  - **Declarative Image Error Handling:** Replaced effect-based image error resets with declarative URL comparison (`failedImageUrl === pkg?.imageUrl`), eliminating cascading re-renders and React compiler warnings.
+  - **Unique Itinerary Keys:** Switched from day index to robust unique keys (`item.id || ${dayNum}-${index}`) to prevent list item collisions.
+  - **Clean Package Unmounting:** Added dynamic `key={selectedPackageId || 'details'}` to `<PackageDetails>` to ensure immediate state cleanup when navigating between packages.
+- **Asynchronous & Error Edge States:**
+  - Loading skeleton display during asynchronous package retrieval.
+  - User-friendly "Package Not Found" state for invalid or nonexistent package identifiers with direct return action.
+  - Network error state with functional "Try Again" retry action.
+
 ---
 
 ## Technology Stack
 - **Frontend Framework:** React 19 + Vite 8
 - **Styling:** Pure Vanilla CSS with CSS Custom Properties, Flexbox, and CSS Grid
-- **Testing:** Vitest (66 unit & integration tests)
+- **Testing:** Vitest (72 unit & integration tests)
 - **Linter & Code Quality:** Oxlint (0 warnings, 0 errors)
 - **Version Control:** Git & GitHub
 - **Project Management:** Jira
@@ -192,6 +206,7 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-10:** Destination Search & Budget Filtering
 - [x] **TAMS-11:** Build Package Details Interface
 - [x] **TAMS-31:** Display Itinerary and Inclusions
+- [x] **TAMS-32:** Validate Package Details and Retrieval
 - [ ] **TAMS-12:** Booking Request Submission & Status Tracking
 
 ---

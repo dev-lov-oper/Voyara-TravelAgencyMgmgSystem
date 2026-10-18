@@ -15,8 +15,10 @@ export default function PackageSection({
   previewMode = 'normal', // 'normal' | 'empty' | 'error'
   onChangePreviewMode,
   initialSearchQuery,
+  onSearchChange,
   initialMinBudget = null,
   initialMaxBudget = null,
+  onBudgetChange,
 }) {
   const [searchQuery, setSearchQuery] = useState(() => {
     if (initialSearchQuery !== undefined) return initialSearchQuery;
@@ -75,21 +77,31 @@ export default function PackageSection({
     return true;
   });
 
+  const handleSearchChange = (val) => {
+    setSearchQuery(val);
+    if (onSearchChange) onSearchChange(val);
+  };
+
   const handleClearSearch = () => {
     setSearchQuery('');
+    if (onSearchChange) onSearchChange('');
   };
 
   const handleApplyBudget = ({ min, max }) => {
     setAppliedBudget({ min, max });
+    if (onBudgetChange) onBudgetChange({ min, max });
   };
 
   const handleClearBudget = () => {
     setAppliedBudget({ min: null, max: null });
+    if (onBudgetChange) onBudgetChange({ min: null, max: null });
   };
 
   const handleResetAllFilters = () => {
     setSearchQuery('');
     setAppliedBudget({ min: null, max: null });
+    if (onSearchChange) onSearchChange('');
+    if (onBudgetChange) onBudgetChange({ min: null, max: null });
   };
 
   const hasAnyFilterActive = Boolean(trimmedQuery || hasMinBudget || hasMaxBudget);
@@ -146,7 +158,7 @@ export default function PackageSection({
           <div className="section-search-bar">
             <DestinationSearch 
               value={searchQuery}
-              onChange={setSearchQuery}
+              onChange={handleSearchChange}
             />
           </div>
           <div className="section-budget-filter">

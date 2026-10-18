@@ -300,3 +300,130 @@ describe('TAMS-31: Itinerary and Inclusions Detailed Validation', () => {
 
 });
 
+describe('TAMS-32: Package Details and Retrieval Comprehensive Validation', () => {
+
+  it('1. Package retrieval by identifier returns correct distinct packages without data contamination', async () => {
+    const pkgGoa = await getPackageById('pkg-1', { forceMock: true });
+    const pkgManali = await getPackageById('pkg-2', { forceMock: true });
+    const pkgKashmir = await getPackageById('pkg-5', { forceMock: true });
+    const pkgAndaman = await getPackageById('pkg-6', { forceMock: true });
+
+    // Verify correct IDs
+    expect(pkgGoa.id).toBe('pkg-1');
+    expect(pkgManali.id).toBe('pkg-2');
+    expect(pkgKashmir.id).toBe('pkg-5');
+    expect(pkgAndaman.id).toBe('pkg-6');
+
+    // Verify distinct titles and destinations
+    expect(pkgGoa.title).toBe('Coastal Escape');
+    expect(pkgGoa.destination).toBe('Goa');
+
+    expect(pkgManali.title).toBe('Himalayan Retreat');
+    expect(pkgManali.destination).toBe('Manali');
+
+    expect(pkgKashmir.title).toBe('Valley of Dreams');
+    expect(pkgKashmir.destination).toBe('Kashmir');
+
+    expect(pkgAndaman.title).toBe('Island Discovery');
+    expect(pkgAndaman.destination).toBe('Andaman');
+
+    // Verify distinct prices
+    expect(pkgGoa.price).toBe(12999);
+    expect(pkgManali.price).toBe(18499);
+    expect(pkgKashmir.price).toBe(29999);
+    expect(pkgAndaman.price).toBe(26499);
+  });
+
+  it('2. Different packages render their own unique details, itineraries, and inclusions', async () => {
+    const pkgGoa = await getPackageById('pkg-1', { forceMock: true });
+    const pkgKashmir = await getPackageById('pkg-5', { forceMock: true });
+
+    const htmlGoa = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: pkgGoa, onBack: () => {} })
+    );
+    const htmlKashmir = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: pkgKashmir, onBack: () => {} })
+    );
+
+    // Goa package details
+    expect(htmlGoa).toContain('Coastal Escape');
+    expect(htmlGoa).toContain('Goa');
+    expect(htmlGoa).toContain('₹12,999');
+    expect(htmlGoa).toContain('Old Goa Heritage &amp; Fontainhas Latin Quarter');
+    expect(htmlGoa).toContain('Morning Arabian Sea dolphin watching boat safari');
+    expect(htmlGoa).not.toContain('Valley of Dreams');
+    expect(htmlGoa).not.toContain('Gulmarg Meadow');
+
+    // Kashmir package details
+    expect(htmlKashmir).toContain('Valley of Dreams');
+    expect(htmlKashmir).toContain('Kashmir');
+    expect(htmlKashmir).toContain('₹29,999');
+    expect(htmlKashmir).toContain('Srinagar Arrival &amp; Dal Lake Shikara Sunset');
+    expect(htmlKashmir).toContain('1 night deluxe Dal Lake houseboat experience');
+    expect(htmlKashmir).not.toContain('Coastal Escape');
+    expect(htmlKashmir).not.toContain('Arabian Sea dolphin');
+  });
+
+  it('3. Invalid or nonexistent package IDs result in null retrieval from service layer', async () => {
+    const nonexistent = await getPackageById('invalid-random-xyz', { forceMock: true });
+    expect(nonexistent).toBeNull();
+
+    const empty = await getPackageById('', { forceMock: true });
+    expect(empty).toBeNull();
+
+    const nullId = await getPackageById(null, { forceMock: true });
+    expect(nullId).toBeNull();
+  });
+
+  it('4. Details view displays fallback visual when package has missing or broken image URL', () => {
+    const noImagePkg = {
+      id: 'pkg-no-img',
+      title: 'Desert Dunes Safari',
+      destination: 'Jaisalmer',
+      price: 11500,
+      imageUrl: '',
+      itinerary: [],
+      inclusions: [],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: noImagePkg, onBack: () => {} })
+    );
+
+    expect(html).toContain('details-image-fallback');
+    expect(html).toContain('Jaisalmer');
+    expect(html).not.toContain('class="details-hero-image"');
+  });
+
+  it('5. Navigation callbacks (onBack) are correctly attached to return buttons and breadcrumbs', () => {
+    const sampleGoa = SAMPLE_PACKAGES.find(p => p.id === 'pkg-1');
+    const html = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: sampleGoa, onBack: () => {} })
+    );
+
+    expect(html).toContain('id="back-to-listing-link"');
+    expect(html).toContain('Back to Packages');
+    expect(html).toContain('← Return to Package Listing');
+    expect(html).toContain('← Back to All Packages');
+  });
+
+  it('6. Error state with retry callback renders properly during retrieval failures', () => {
+    let retried = false;
+    const html = renderToStaticMarkup(
+      React.createElement(PackageDetails, {
+        error: 'Network connection timed out',
+        onRetry: () => { retried = true; },
+        onBack: () => {},
+      })
+    );
+
+    expect(html).toContain('Unable to Load Package Details');
+    expect(html).toContain('Network connection timed out');
+    expect(html).toContain('Try Again');
+    expect(html).toContain('Back to Packages');
+    expect(retried).toBe(false);
+  });
+
+});
+
+
