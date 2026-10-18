@@ -67,7 +67,7 @@ describe('TAMS-11: Package Details Interface Validation', () => {
     expect(html).toContain('Private roundtrip airport or railway station transfers');
 
     // Exclusions
-    expect(html).toContain("What&#x27;s Excluded");
+    expect(html).toContain("What&#x27;s Not Included");
     expect(html).toContain('Flight or train fare to and from Goa');
     expect(html).toContain('Water sports activities and scuba diving fees');
   });
@@ -83,10 +83,11 @@ describe('TAMS-11: Package Details Interface Validation', () => {
     expect(html).toContain('3 days');
     expect(html).toContain('₹8,999');
 
-    // Fallback notes are displayed gracefully without crashing
-    expect(html).toContain('A customized day-by-day itinerary will be tailored');
-    expect(html).toContain('Standard accommodation, daily breakfast, and sightseeing transfers are provided');
-    expect(html).toContain('Personal expenses, airfare/railfare, monument entry permits, and optional adventure activities are excluded');
+    // Fallback notes are displayed gracefully without fabricating activities or assuming inclusions
+    expect(html).toContain('Itinerary details for this package are currently unavailable');
+    expect(html).toContain('No specific inclusions listed for this package');
+    // Exclusions section should be omitted if no exclusions are present
+    expect(html).not.toContain("What&#x27;s Not Included");
   });
 
   it('6. Renders clear return navigation actions (breadcrumbs and Back button)', () => {
@@ -195,3 +196,107 @@ describe('TAMS-11: App View Routing & Listing Preservation', () => {
   });
 
 });
+
+describe('TAMS-31: Itinerary and Inclusions Detailed Validation', () => {
+
+  it('sorts itinerary days in chronological order even if data is out of order', () => {
+    const unorderedPkg = {
+      id: 'pkg-unordered',
+      title: 'Unordered Tour',
+      destination: 'Varanasi',
+      price: 15000,
+      duration: 3,
+      itinerary: [
+        { day: 3, title: 'Day Three Finale', description: 'Ganga Aarti' },
+        { day: 1, title: 'Day One Arrival', description: 'Check-in and evening stroll' },
+        { day: 2, title: 'Day Two Temples', description: 'Kashi Vishwanath visit' },
+      ],
+      inclusions: ['Hotel stay', 'Temple guide'],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: unorderedPkg, onBack: () => {} })
+    );
+
+    const idxDay1 = html.indexOf('Day One Arrival');
+    const idxDay2 = html.indexOf('Day Two Temples');
+    const idxDay3 = html.indexOf('Day Three Finale');
+
+    expect(idxDay1).toBeGreaterThan(-1);
+    expect(idxDay2).toBeGreaterThan(-1);
+    expect(idxDay3).toBeGreaterThan(-1);
+    expect(idxDay1).toBeLessThan(idxDay2);
+    expect(idxDay2).toBeLessThan(idxDay3);
+  });
+
+  it('supports packages with different itinerary lengths (5-day Manali & 6-day Kerala)', () => {
+    const manaliPkg = SAMPLE_PACKAGES.find(p => p.id === 'pkg-2');
+    const keralaPkg = SAMPLE_PACKAGES.find(p => p.id === 'pkg-4');
+
+    const htmlManali = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: manaliPkg, onBack: () => {} })
+    );
+    expect(htmlManali).toContain('5 Days Schedule');
+    expect(htmlManali).toContain('Day 5');
+    expect(htmlManali).toContain('Farewell Manali');
+
+    const htmlKerala = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: keralaPkg, onBack: () => {} })
+    );
+    expect(htmlKerala).toContain('6 Days Schedule');
+    expect(htmlKerala).toContain('Day 6');
+    expect(htmlKerala).toContain('Cochin City Tour &amp; Departure');
+  });
+
+  it('renders package inclusions as an accessible list', () => {
+    const manaliPkg = SAMPLE_PACKAGES.find(p => p.id === 'pkg-2');
+    const html = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: manaliPkg, onBack: () => {} })
+    );
+
+    expect(html).toContain('What&#x27;s Included');
+    expect(html).toContain('role="list" aria-label="Package inclusions"');
+    expect(html).toContain('4 nights cedar-view lodge accommodation');
+    expect(html).toContain('Daily breakfast and four-course mountain dinners');
+  });
+
+  it('handles empty inclusions and missing itinerary gracefully without fabricated content', () => {
+    const emptyPkg = {
+      id: 'pkg-empty',
+      title: 'Bare Minimum Package',
+      destination: 'Hampi',
+      itinerary: [],
+      inclusions: [],
+      exclusions: [],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: emptyPkg, onBack: () => {} })
+    );
+
+    expect(html).toContain('Itinerary details for this package are currently unavailable');
+    expect(html).toContain('No specific inclusions listed for this package');
+    expect(html).not.toContain('What&#x27;s Not Included');
+  });
+
+  it('handles undefined or null itinerary and inclusions gracefully', () => {
+    const nullPkg = {
+      id: 'pkg-null-props',
+      title: 'Null Fields Package',
+      destination: 'Pondicherry',
+      itinerary: null,
+      inclusions: null,
+      exclusions: null,
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(PackageDetails, { pkg: nullPkg, onBack: () => {} })
+    );
+
+    expect(html).toContain('Itinerary details for this package are currently unavailable');
+    expect(html).toContain('No specific inclusions listed for this package');
+    expect(html).not.toContain('What&#x27;s Not Included');
+  });
+
+});
+

@@ -110,6 +110,11 @@ export default function PackageDetails({
   const inclusions = Array.isArray(pkg.inclusions) ? pkg.inclusions : [];
   const exclusions = Array.isArray(pkg.exclusions) ? pkg.exclusions : [];
 
+  // Chronologically sort itinerary days
+  const sortedItinerary = [...itinerary].sort(
+    (a, b) => (Number(a.day) || 0) - (Number(b.day) || 0)
+  );
+
   return (
     <article className="package-details-page" aria-labelledby="details-package-title">
       <div className="section-container">
@@ -231,55 +236,62 @@ export default function PackageDetails({
               </div>
             </section>
 
-            {/* Day-by-Day Itinerary */}
+            {/* Day-by-Day Itinerary (TAMS-31) */}
             <section className="details-section-card" aria-labelledby="heading-itinerary">
               <div className="section-title-wrap">
                 <h2 id="heading-itinerary" className="details-section-title">
                   Day-by-Day Itinerary
                 </h2>
-                {itinerary.length > 0 && (
-                  <span className="itinerary-badge">{itinerary.length} Day Schedule</span>
+                {sortedItinerary.length > 0 && (
+                  <span className="itinerary-badge">
+                    {sortedItinerary.length} {sortedItinerary.length === 1 ? 'Day' : 'Days'} Schedule
+                  </span>
                 )}
               </div>
 
-              {itinerary.length > 0 ? (
-                <div className="itinerary-timeline" role="list" aria-label="Daily tour itinerary">
-                  {itinerary.map((item, index) => (
-                    <div key={item.day || index} className="itinerary-item" role="listitem">
-                      <div className="itinerary-day-indicator">
-                        <span className="day-number">Day {item.day || index + 1}</span>
+              {sortedItinerary.length > 0 ? (
+                <div className="itinerary-timeline" role="list" aria-label="Day-by-day tour itinerary">
+                  {sortedItinerary.map((item, index) => {
+                    const dayNum = item.day || index + 1;
+                    return (
+                      <div key={dayNum} className="itinerary-item" role="listitem">
+                        <div className="itinerary-day-indicator">
+                          <span className="day-number">Day {dayNum}</span>
+                        </div>
+                        <div className="itinerary-day-content">
+                          <h3 className="itinerary-day-title">{item.title || `Day ${dayNum}`}</h3>
+                          {item.description && (
+                            <p className="itinerary-day-description">{item.description}</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="itinerary-day-content">
-                        <h3 className="itinerary-day-title">{item.title}</h3>
-                        <p className="itinerary-day-description">{item.description}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="details-empty-note">
+                <div className="details-empty-note" role="note">
                   <p>
-                    A customized day-by-day itinerary will be tailored with your dedicated Voyara travel specialist upon booking inquiry.
+                    Itinerary details for this package are currently unavailable. A customized day-by-day schedule can be tailored upon inquiry.
                   </p>
                 </div>
               )}
             </section>
           </div>
 
-          {/* Sidebar / Inclusions & Exclusions Column */}
+          {/* Sidebar / Inclusions & Exclusions Column (TAMS-31) */}
           <aside className="details-sidebar-column">
             
-            {/* Inclusions Card */}
+            {/* What's Included */}
             <section className="details-inclusions-card" aria-labelledby="heading-inclusions">
-              <h3 id="heading-inclusions" className="inclusions-title">
+              <h2 id="heading-inclusions" className="inclusions-title">
                 <span className="inclusion-title-icon" aria-hidden="true">✓</span>
                 What's Included
-              </h3>
+              </h2>
 
               {inclusions.length > 0 ? (
-                <ul className="inclusions-list">
+                <ul className="inclusions-list" role="list" aria-label="Package inclusions">
                   {inclusions.map((item, idx) => (
-                    <li key={idx} className="inclusion-item">
+                    <li key={idx} className="inclusion-item" role="listitem">
                       <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" className="check-icon" aria-hidden="true">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
@@ -289,22 +301,22 @@ export default function PackageDetails({
                 </ul>
               ) : (
                 <p className="details-empty-note-small">
-                  Standard accommodation, daily breakfast, and sightseeing transfers are provided. Specific inclusion details provided upon booking.
+                  No specific inclusions listed for this package. Inclusion details are available upon request.
                 </p>
               )}
             </section>
 
-            {/* Exclusions Card */}
-            <section className="details-exclusions-card" aria-labelledby="heading-exclusions">
-              <h3 id="heading-exclusions" className="exclusions-title">
-                <span className="exclusion-title-icon" aria-hidden="true">✕</span>
-                What's Excluded
-              </h3>
+            {/* What's Not Included (Exclusions) */}
+            {exclusions.length > 0 && (
+              <section className="details-exclusions-card" aria-labelledby="heading-exclusions">
+                <h2 id="heading-exclusions" className="exclusions-title">
+                  <span className="exclusion-title-icon" aria-hidden="true">✕</span>
+                  What's Not Included
+                </h2>
 
-              {exclusions.length > 0 ? (
-                <ul className="exclusions-list">
+                <ul className="exclusions-list" role="list" aria-label="Package exclusions">
                   {exclusions.map((item, idx) => (
-                    <li key={idx} className="exclusion-item">
+                    <li key={idx} className="exclusion-item" role="listitem">
                       <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" className="cross-icon" aria-hidden="true">
                         <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
@@ -312,12 +324,8 @@ export default function PackageDetails({
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="details-empty-note-small">
-                  Personal expenses, airfare/railfare, monument entry permits, and optional adventure activities are excluded.
-                </p>
-              )}
-            </section>
+              </section>
+            )}
 
             {/* Return Action in Sidebar */}
             <div className="details-sidebar-cta">

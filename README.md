@@ -84,12 +84,29 @@ Travelers often need to browse multiple travel options and contact agents manual
   - Dedicated "Package Not Found" view with return action when an invalid package identifier is requested.
   - Loading skeleton state and error recovery banner with retry option.
 
+### 5. Display Itinerary and Inclusions (Jira Story: TAMS-31)
+- **Day-by-Day Itinerary (`PackageDetails.jsx`):**
+  - Clearly labelled `"Day-by-Day Itinerary"` section with schedule duration badge (`X Days Schedule`).
+  - Displays each itinerary day in chronological order (`sortedItinerary`) regardless of source array ordering.
+  - Numbered day badges (`Day 1`, `Day 2`, etc.), bold title, and detailed descriptive summary.
+  - Supports packages with varying itinerary lengths (e.g., 4-day Goa, 5-day Manali, 6-day Kerala).
+  - Graceful fallback note when itinerary details are not yet provided (`"Itinerary details for this package are currently unavailable. A customized day-by-day schedule can be tailored upon inquiry."`), avoiding fabricated activities.
+- **Package Inclusions & Exclusions (`PackageDetails.jsx`):**
+  - Clearly labelled `"What's Included"` section with green checkmark iconography.
+  - Accessible list markup (`role="list"` and `role="listitem"`) displaying all confirmed inclusions.
+  - Safe fallback when no inclusions are listed (`"No specific inclusions listed for this package. Inclusion details are available upon request."`), without assuming standard items.
+  - Clearly labelled `"What's Not Included"` section for exclusions, rendered conditionally only when exclusions are explicitly present in the data model.
+- **Responsive Layout & Alignment:**
+  - Robust 2-column desktop grid with sticky sidebar.
+  - Single-column stacked layout on mobile devices (`max-width: 640px`) and tablets (`max-width: 1024px`).
+  - Consistent padding using `--screen-padding` token preventing layout clipping on smaller screens.
+
 ---
 
 ## Technology Stack
 - **Frontend Framework:** React 19 + Vite 8
 - **Styling:** Pure Vanilla CSS with CSS Custom Properties, Flexbox, and CSS Grid
-- **Testing:** Vitest (61 unit & integration tests)
+- **Testing:** Vitest (66 unit & integration tests)
 - **Linter & Code Quality:** Oxlint (0 warnings, 0 errors)
 - **Version Control:** Git & GitHub
 - **Project Management:** Jira
@@ -174,6 +191,7 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-25:** Implement Destination Search Logic
 - [x] **TAMS-10:** Destination Search & Budget Filtering
 - [x] **TAMS-11:** Build Package Details Interface
+- [x] **TAMS-31:** Display Itinerary and Inclusions
 - [ ] **TAMS-12:** Booking Request Submission & Status Tracking
 
 ---
