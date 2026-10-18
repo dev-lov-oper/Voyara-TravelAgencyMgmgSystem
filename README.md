@@ -44,11 +44,25 @@ Travelers often need to browse multiple travel options and contact agents manual
   - **Empty State:** Distinct empty state (`EmptyState.jsx`) displaying *"No packages available right now."* with supporting information when 0 packages are active.
   - **Reviewer State Toggle:** Interactive pill buttons to easily toggle between available packages and the empty state.
 
+### 3. Destination Search Interface & Filtering (Jira Stories: TAMS-24 & TAMS-25)
+- **Search Interface (`DestinationSearch.jsx`):**
+  - Search input with placeholder `"Search by destination..."`.
+  - Accessible search icon and landmark `role="search"`.
+  - Clear button (`×`) appears dynamically whenever text is entered.
+  - Keyboard accessibility with `Escape` to clear search and screen-reader accessible label.
+- **Client-Side Search Logic (`PackageSection.jsx`):**
+  - Dynamic filtering as the user types without mutating original package data.
+  - Case-insensitive substring matching (e.g. searching `"man"` matches `"Manali"` and `"Andaman"`).
+  - Trims leading/trailing whitespace.
+  - When cleared, restores all active packages.
+  - Distinct empty state for search (`"No packages found for this destination."` + *"Clear Search"* action button) distinct from zero-package catalog state.
+
 ---
 
 ## Technology Stack
 - **Frontend Framework:** React 19 + Vite 8
 - **Styling:** Pure Vanilla CSS with CSS Custom Properties, Flexbox, and CSS Grid
+- **Testing:** Vitest (25 unit & integration tests)
 - **Linter & Code Quality:** Oxlint (0 warnings, 0 errors)
 - **Version Control:** Git & GitHub
 - **Project Management:** Jira
@@ -74,8 +88,11 @@ npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### 4. Production Build & Linting
+### 4. Run Tests, Linting & Build
 ```bash
+# Run unit & integration tests
+npm test
+
 # Run lint check
 npm run lint
 
@@ -90,6 +107,7 @@ npm run build
 Voyara-TravelAgencyMgmgSystem/
 ├── src/
 │   ├── components/
+│   │   ├── DestinationSearch.jsx       # Destination search bar with clear button
 │   │   ├── DetailsPlaceholderModal.jsx # Accessible preview dialog
 │   │   ├── EmptyState.jsx              # No packages empty state
 │   │   ├── ErrorState.jsx              # Error banner with retry
@@ -98,7 +116,7 @@ Voyara-TravelAgencyMgmgSystem/
 │   │   ├── LoadingSkeleton.jsx         # Shimmering skeleton cards
 │   │   ├── Navbar.jsx                  # Header with desktop/mobile navigation
 │   │   ├── PackageCard.jsx             # Individual travel package card
-│   │   └── PackageSection.jsx          # Package listing section & grid
+│   │   └── PackageSection.jsx          # Package listing section, search & grid
 │   ├── data/
 │   │   └── packages.js                 # Sample package dataset
 │   ├── services/
@@ -106,6 +124,9 @@ Voyara-TravelAgencyMgmgSystem/
 │   ├── App.jsx                         # Main application component
 │   ├── index.css                       # Full-width design system & styles
 │   └── main.jsx                        # Entry point
+├── tests/
+│   ├── destinationSearch.test.js       # TAMS-24/TAMS-25 search interface & logic tests
+│   └── packageListing.test.js          # TAMS-7/TAMS-8 data retrieval & state tests
 ├── index.html                          # HTML shell with Google Fonts & SEO tags
 ├── package.json
 └── README.md
@@ -118,6 +139,8 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-7:** Browse Available Travel Packages (Package Listing UI)
 - [x] **TAMS-8:** Package Data Retrieval (Dynamic API, Loading, Error & Empty States)
 - [x] **TAMS-9:** Package Details & Detailed Itinerary View
+- [x] **TAMS-24:** Build Destination Search Interface
+- [x] **TAMS-25:** Implement Destination Search Logic
 - [x] **TAMS-10:** Destination Search & Budget Filtering
 - [ ] **TAMS-11:** Booking Request Submission
 - [ ] **TAMS-12:** Booking Status Tracking & Agent Decisions
