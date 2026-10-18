@@ -3,6 +3,7 @@ import PackageCard from './PackageCard';
 import EmptyState from './EmptyState';
 import LoadingSkeleton from './LoadingSkeleton';
 import ErrorState from './ErrorState';
+import DestinationSearch from './DestinationSearch';
 
 export default function PackageSection({ 
   packages = [], 
@@ -63,6 +64,11 @@ export default function PackageSection({
               </button>
             </div>
           )}
+        </div>
+
+        {/* Destination Search Bar (TAMS-24) */}
+        <div className="section-search-bar">
+          <DestinationSearch />
         </div>
 
         {/* Dynamic State Rendering: Loading -> Error -> Empty -> List */}
