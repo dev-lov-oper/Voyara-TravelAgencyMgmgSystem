@@ -59,6 +59,30 @@ export function normalizePackage(raw) {
   // Status check (support active / is_active if backend provides it)
   const isActive = raw.isActive ?? raw.is_active ?? (raw.status ? raw.status.toLowerCase() === 'active' : true);
 
+  // Itinerary normalization (supports array of objects or strings)
+  const rawItinerary = raw.itinerary || raw.days_plan || raw.schedule || [];
+  const itinerary = Array.isArray(rawItinerary)
+    ? rawItinerary.map((item, idx) => {
+        if (typeof item === 'string') {
+          return { day: idx + 1, title: `Day ${idx + 1}`, description: item };
+        }
+        return {
+          day: item.day || idx + 1,
+          title: item.title || `Day ${item.day || idx + 1}`,
+          description: item.description || item.details || item.activity || ''
+        };
+      })
+    : [];
+
+  // Inclusions and exclusions normalization
+  const inclusions = Array.isArray(raw.inclusions || raw.included)
+    ? (raw.inclusions || raw.included).map(String)
+    : [];
+
+  const exclusions = Array.isArray(raw.exclusions || raw.excluded)
+    ? (raw.exclusions || raw.excluded).map(String)
+    : [];
+
   return {
     id: String(id),
     title: String(title),
@@ -71,8 +95,25 @@ export function normalizePackage(raw) {
     imageUrl: String(imageUrl),
     imageAlt: String(imageAlt),
     category: String(category),
-    isActive: Boolean(isActive)
+    isActive: Boolean(isActive),
+    itinerary,
+    inclusions,
+    exclusions
   };
+}
+
+/**
+ * Retrieves a single travel package by its identifier.
+ * Returns null if the package is not found.
+ * 
+ * @param {string} id - Package identifier
+ * @param {Object} [options]
+ * @returns {Promise<Object|null>}
+ */
+export async function getPackageById(id, { signal, forceMock = false } = {}) {
+  if (!id) return null;
+  const packages = await getTravelPackages({ signal, forceMock });
+  return packages.find(pkg => String(pkg.id) === String(id)) || null;
 }
 
 /**

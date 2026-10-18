@@ -64,12 +64,32 @@ Travelers often need to browse multiple travel options and contact agents manual
   - Active filter tags and live match counter (`Showing X of Y packages`).
   - Distinct empty states for no destination match, no budget match, combined filter mismatch, and empty catalog.
 
+### 4. Package Details Interface (Jira Story: TAMS-11)
+- **Comprehensive Details View (`PackageDetails.jsx`):**
+  - High-resolution hero image, destination/duration/category badges, and package title heading.
+  - Quick specification cards for duration, price in Indian Rupees (`₹`), destination, and travel category.
+  - Full overview description section.
+- **Day-by-Day Itinerary:**
+  - Structured timeline with numbered Day indicators, milestone titles, and detailed descriptions.
+  - Graceful fallback message when itinerary details are pending or customized on request.
+- **Inclusions & Exclusions:**
+  - Dedicated cards with visual iconography (green `✓` checkmarks for inclusions, red `✕` crosses for exclusions).
+  - Graceful notes when optional fields are omitted in raw data.
+- **Navigation & Routing:**
+  - Connects "View Details" on package cards directly to the details view.
+  - Breadcrumbs (`Home / Packages / [Destination]`) and prominent "← Back to Packages" return buttons.
+  - URL synchronization (`?package=pkg-id`) and browser history support (`popstate`).
+  - Preserves user search query and budget filter settings when returning to the package listing.
+- **Resilience & Error States:**
+  - Dedicated "Package Not Found" view with return action when an invalid package identifier is requested.
+  - Loading skeleton state and error recovery banner with retry option.
+
 ---
 
 ## Technology Stack
 - **Frontend Framework:** React 19 + Vite 8
 - **Styling:** Pure Vanilla CSS with CSS Custom Properties, Flexbox, and CSS Grid
-- **Testing:** Vitest (48 unit & integration tests)
+- **Testing:** Vitest (61 unit & integration tests)
 - **Linter & Code Quality:** Oxlint (0 warnings, 0 errors)
 - **Version Control:** Git & GitHub
 - **Project Management:** Jira
@@ -124,17 +144,19 @@ Voyara-TravelAgencyMgmgSystem/
 │   │   ├── LoadingSkeleton.jsx         # Shimmering skeleton cards
 │   │   ├── Navbar.jsx                  # Header with desktop/mobile navigation
 │   │   ├── PackageCard.jsx             # Individual travel package card
+│   │   ├── PackageDetails.jsx          # Comprehensive package details page view
 │   │   └── PackageSection.jsx          # Package listing section, toolbar, search & grid
 │   ├── data/
-│   │   └── packages.js                 # Sample package dataset
+│   │   └── packages.js                 # Sample package dataset with itineraries & inclusions
 │   ├── services/
-│   │   └── packageService.js           # API retrieval & response normalization
-│   ├── App.jsx                         # Main application component
+│   │   └── packageService.js           # API retrieval, getPackageById & response normalization
+│   ├── App.jsx                         # Main application component & routing
 │   ├── index.css                       # Full-width design system & styles
 │   └── main.jsx                        # Entry point
 ├── tests/
 │   ├── budgetFilter.test.js            # TAMS-10 budget filter unit & integration tests
 │   ├── destinationSearch.test.js       # TAMS-24/TAMS-25 search interface & logic tests
+│   ├── packageDetails.test.js          # TAMS-11 package details unit & integration tests
 │   └── packageListing.test.js          # TAMS-7/TAMS-8 data retrieval & state tests
 ├── index.html                          # HTML shell with Google Fonts & SEO tags
 ├── package.json
@@ -151,8 +173,8 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-24:** Build Destination Search Interface
 - [x] **TAMS-25:** Implement Destination Search Logic
 - [x] **TAMS-10:** Destination Search & Budget Filtering
-- [ ] **TAMS-11:** Booking Request Submission
-- [ ] **TAMS-12:** Booking Status Tracking & Agent Decisions
+- [x] **TAMS-11:** Build Package Details Interface
+- [ ] **TAMS-12:** Booking Request Submission & Status Tracking
 
 ---
 
