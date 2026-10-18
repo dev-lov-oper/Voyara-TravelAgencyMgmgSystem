@@ -11,7 +11,13 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [previewMode, setPreviewMode] = useState('normal'); // 'normal' | 'empty' | 'error'
+  const [previewMode, setPreviewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('state');
+      if (param === 'empty' || param === 'error') return param;
+    }
+    return 'normal';
+  });
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
