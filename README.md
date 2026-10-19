@@ -115,12 +115,35 @@ Travelers often need to browse multiple travel options and contact agents manual
   - User-friendly "Package Not Found" state for invalid or nonexistent package identifiers with direct return action.
   - Network error state with functional "Try Again" retry action.
 
+### 7. Booking Request Form & Validation (Jira Story: TAMS-33)
+- **Booking Request Form (`BookingForm.jsx`):**
+  - **Traveler Full Name:** Required input with accessible label, autocomplete, and character length check.
+  - **Email Address:** Required input with RFC 5322 regex validation (`user@domain.tld`).
+  - **Phone Number:** Required telephone input supporting Indian 10-digit mobile numbers with optional country code (`+91`), spaces, hyphens, and international formats (10 to 15 digits).
+  - **Number of Travelers:** Required positive integer input (minimum 1, whole numbers only).
+  - **Preferred Travel Date:** Required date input with past-date prevention (`min={todayStr}`).
+  - **Additional Requests:** Optional multiline textarea for dietary requirements, accessibility needs, or room preferences.
+  - **Submit Button:** Clearly labelled `"Submit Booking Request"` primary action button.
+- **Client-Side Validation & Feedback:**
+  - Clear error messages displayed directly below each erroneous field with accessible `role="alert"` and `aria-describedby`.
+  - Inputs highlighted with `aria-invalid="true"` and visible error borders.
+  - Automatically preserves entered values when validation fails.
+  - Dedicated validation utilities extracted into [`src/utils/bookingValidation.js`](file:///c:/Users/hp/OneDrive/Desktop/Sharvan%202.0/SE-PLB/src/utils/bookingValidation.js).
+- **Selected Package Summary:**
+  - Displays selected package name, destination, duration, category, and price per person.
+  - Dynamic transparent price calculation: displays estimated total based on selected traveler count (`₹price × travelers = ₹total`).
+  - "No payment required right now" reassuring traveler guarantee notice.
+- **Confirmation State & Routing:**
+  - When client validation succeeds, renders a clean acknowledgment view summarizing traveler details.
+  - Clearly communicates separation from backend integration: *"Database booking creation and reservation confirmation will be connected in TAMS-34."*
+  - Seamless navigation back to package details view (`Back to Package Details` / `Cancel`) and URL state synchronization (`?package=id&action=book`).
+
 ---
 
 ## Technology Stack
 - **Frontend Framework:** React 19 + Vite 8
 - **Styling:** Pure Vanilla CSS with CSS Custom Properties, Flexbox, and CSS Grid
-- **Testing:** Vitest (72 unit & integration tests)
+- **Testing:** Vitest (94 unit & integration tests)
 - **Linter & Code Quality:** Oxlint (0 warnings, 0 errors)
 - **Version Control:** Git & GitHub
 - **Project Management:** Jira
@@ -165,6 +188,7 @@ npm run build
 Voyara-TravelAgencyMgmgSystem/
 ├── src/
 │   ├── components/
+│   │   ├── BookingForm.jsx             # Booking request form with validation & summary
 │   │   ├── BudgetFilter.jsx            # Min/max budget filter controls & validation
 │   │   ├── DestinationSearch.jsx       # Destination search bar with clear button
 │   │   ├── DetailsPlaceholderModal.jsx # Accessible preview dialog
@@ -181,13 +205,16 @@ Voyara-TravelAgencyMgmgSystem/
 │   │   └── packages.js                 # Sample package dataset with itineraries & inclusions
 │   ├── services/
 │   │   └── packageService.js           # API retrieval, getPackageById & response normalization
+│   ├── utils/
+│   │   └── bookingValidation.js        # Email, phone, date, and traveler count validators
 │   ├── App.jsx                         # Main application component & routing
 │   ├── index.css                       # Full-width design system & styles
 │   └── main.jsx                        # Entry point
 ├── tests/
+│   ├── bookingForm.test.js             # TAMS-33 booking form validation & UI tests
 │   ├── budgetFilter.test.js            # TAMS-10 budget filter unit & integration tests
 │   ├── destinationSearch.test.js       # TAMS-24/TAMS-25 search interface & logic tests
-│   ├── packageDetails.test.js          # TAMS-11 package details unit & integration tests
+│   ├── packageDetails.test.js          # TAMS-11/TAMS-31/TAMS-32 package details tests
 │   └── packageListing.test.js          # TAMS-7/TAMS-8 data retrieval & state tests
 ├── index.html                          # HTML shell with Google Fonts & SEO tags
 ├── package.json
@@ -207,6 +234,8 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-11:** Build Package Details Interface
 - [x] **TAMS-31:** Display Itinerary and Inclusions
 - [x] **TAMS-32:** Validate Package Details and Retrieval
+- [x] **TAMS-33:** Build Booking Form
+- [ ] **TAMS-34:** Booking Submission & Backend Integration
 - [ ] **TAMS-12:** Booking Request Submission & Status Tracking
 
 ---

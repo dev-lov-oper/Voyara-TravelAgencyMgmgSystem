@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
 import PackageSection from './components/PackageSection';
 import PackageDetails from './components/PackageDetails';
+import BookingForm from './components/BookingForm';
 import Footer from './components/Footer';
 import { getTravelPackages } from './services/packageService';
 
@@ -17,6 +18,14 @@ export default function App() {
       return new URLSearchParams(window.location.search).get('package') || null;
     }
     return null;
+  });
+
+  const [isBooking, setIsBooking] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('action') === 'book' || params.get('booking') === 'true';
+    }
+    return false;
   });
 
   const [searchQuery, setSearchQuery] = useState(() => {
@@ -51,8 +60,10 @@ export default function App() {
   // Synchronize browser history (Back / Forward navigation)
   useEffect(() => {
     const handlePopState = () => {
-      const param = new URLSearchParams(window.location.search).get('package');
-      setSelectedPackageId(param || null);
+      const params = new URLSearchParams(window.location.search);
+      const pkgParam = params.get('package');
+      setSelectedPackageId(pkgParam || null);
+      setIsBooking(Boolean(pkgParam && (params.get('action') === 'book' || params.get('booking') === 'true')));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -105,19 +116,48 @@ export default function App() {
   const handleOpenDetails = (pkg) => {
     const pkgId = pkg?.id || null;
     setSelectedPackageId(pkgId);
+    setIsBooking(false);
     if (typeof window !== 'undefined' && pkgId) {
       const url = new URL(window.location.href);
       url.searchParams.set('package', pkgId);
+      url.searchParams.delete('action');
+      url.searchParams.delete('booking');
       window.history.pushState({ packageId: pkgId }, '', url.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleStartBooking = (pkg) => {
+    const pkgId = pkg?.id || selectedPackageId;
+    setIsBooking(true);
+    if (typeof window !== 'undefined' && pkgId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('package', pkgId);
+      url.searchParams.set('action', 'book');
+      window.history.pushState({ packageId: pkgId, action: 'book' }, '', url.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleBackToDetails = () => {
+    setIsBooking(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('action');
+      url.searchParams.delete('booking');
+      window.history.pushState({ packageId: selectedPackageId }, '', url.toString());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleBackToListing = () => {
     setSelectedPackageId(null);
+    setIsBooking(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('package');
+      url.searchParams.delete('action');
+      url.searchParams.delete('booking');
       window.history.pushState({}, '', url.pathname + (url.search ? url.search : ''));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -136,14 +176,27 @@ export default function App() {
       {/* Main Content Area */}
       <main id="main-content" className="main-content">
         {selectedPackageId ? (
-          <PackageDetails
-            key={selectedPackageId || 'details'}
-            pkg={selectedPackage}
-            onBack={handleBackToListing}
-            isLoading={isLoading}
-            error={error}
-            onRetry={handleRetry}
-          />
+          isBooking ? (
+            <BookingForm
+              key={`booking-${selectedPackageId}`}
+              pkg={selectedPackage}
+              onBack={handleBackToDetails}
+              onSubmit={(bookingData) => {
+                // Client-side validation complete, ready for TAMS-34 backend booking creation
+                console.log('[TAMS-33 Booking Request Prepared]', bookingData);
+              }}
+            />
+          ) : (
+            <PackageDetails
+              key={selectedPackageId || 'details'}
+              pkg={selectedPackage}
+              onBack={handleBackToListing}
+              onBook={handleStartBooking}
+              isLoading={isLoading}
+              error={error}
+              onRetry={handleRetry}
+            />
+          )
         ) : (
           <>
             {/* Hero Section */}

@@ -8,6 +8,7 @@ import React, { useState } from 'react';
  * @param {Object} props
  * @param {Object|null} props.pkg - Selected normalized package object
  * @param {Function} props.onBack - Callback to return to the package listing
+ * @param {Function} [props.onBook] - Callback to transition to the booking form
  * @param {boolean} [props.isLoading] - Loading indicator state
  * @param {string|null} [props.error] - Error message state
  * @param {Function} [props.onRetry] - Callback to retry package loading
@@ -15,6 +16,7 @@ import React, { useState } from 'react';
 export default function PackageDetails({
   pkg,
   onBack,
+  onBook,
   isLoading = false,
   error = null,
   onRetry,
@@ -328,8 +330,18 @@ export default function PackageDetails({
               </section>
             )}
 
-            {/* Return Action in Sidebar */}
+            {/* Return & Booking Action in Sidebar */}
             <div className="details-sidebar-cta">
+              {onBook && (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-full-width btn-book-now"
+                  onClick={() => onBook(pkg)}
+                  id="book-package-btn"
+                >
+                  Book This Package
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-secondary btn-full-width"
