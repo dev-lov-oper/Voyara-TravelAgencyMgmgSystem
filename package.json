@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "oxlint",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "migrate": "node src/server/db/runMigrationsCli.js",
+    "server": "node src/server/index.js"
   },
   "dependencies": {
     "react": "^19.2.8",

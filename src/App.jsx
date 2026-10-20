@@ -181,10 +181,6 @@ export default function App() {
               key={`booking-${selectedPackageId}`}
               pkg={selectedPackage}
               onBack={handleBackToDetails}
-              onSubmit={(bookingData) => {
-                // Client-side validation complete, ready for TAMS-34 backend booking creation
-                console.log('[TAMS-33 Booking Request Prepared]', bookingData);
-              }}
             />
           ) : (
             <PackageDetails

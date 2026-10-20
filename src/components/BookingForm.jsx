@@ -6,19 +6,22 @@ import {
   isValidTravelDate,
   getTodayDateString,
 } from '../utils/bookingValidation.js';
+import { createBooking } from '../services/bookingService.js';
 
 /**
- * BookingForm Component (TAMS-33)
+ * BookingForm Component (TAMS-33 & TAMS-34)
  * Collects traveler contact and trip details for a selected travel package with
- * comprehensive client-side validation, accessible markup, and selected package summary.
+ * comprehensive client-side validation, server-side API integration, persistent database storage,
+ * and duplicate submission prevention.
  *
  * @param {Object} props
  * @param {Object} [props.pkg] - Selected package object
  * @param {Function} props.onBack - Callback to return to the package details view
- * @param {Function} [props.onSubmit] - Callback invoked when client-side validation succeeds
+ * @param {Function} [props.onSubmit] - Optional callback or override for booking submission
  * @param {Object} [props.initialValues] - Initial form field values
  * @param {Object} [props.initialErrors] - Initial form validation errors
  * @param {Object|null} [props.initialSubmittedData] - Initial submitted confirmation data
+ * @param {string|null} [props.initialServerError] - Initial server error message
  */
 export default function BookingForm({
   pkg,
@@ -27,6 +30,7 @@ export default function BookingForm({
   initialValues = {},
   initialErrors = {},
   initialSubmittedData = null,
+  initialServerError = null,
 }) {
   // Form input state
   const [formData, setFormData] = useState({
@@ -40,6 +44,12 @@ export default function BookingForm({
 
   // Validation error state
   const [errors, setErrors] = useState(initialErrors);
+
+  // Server error state
+  const [serverError, setServerError] = useState(initialServerError);
+
+  // In-flight submission state (prevents duplicate submissions)
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Submission / confirmation state
   const [submittedData, setSubmittedData] = useState(initialSubmittedData);
@@ -64,13 +74,18 @@ export default function BookingForm({
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Clear error for this field as the user types
+    // Clear field-specific error as the user types
     if (errors[name]) {
       setErrors((prev) => {
         const next = { ...prev };
         delete next[name];
         return next;
       });
+    }
+
+    // Clear server error banner upon edit
+    if (serverError) {
+      setServerError(null);
     }
   };
 
@@ -115,8 +130,13 @@ export default function BookingForm({
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Prevent duplicate accidental submissions while in-flight
+    if (isSubmitting) {
+      return;
+    }
 
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -131,6 +151,9 @@ export default function BookingForm({
     }
 
     setErrors({});
+    setServerError(null);
+    setIsSubmitting(true);
+
     const payload = {
       packageId: pkg?.id || null,
       packageTitle: title,
@@ -146,16 +169,57 @@ export default function BookingForm({
       submittedAt: new Date().toISOString(),
     };
 
-    setSubmittedData(payload);
+    try {
+      let createdBooking = null;
 
-    if (onSubmit) {
-      onSubmit(payload);
+      // Allow parent custom handler or spy if provided
+      if (typeof onSubmit === 'function') {
+        const customResult = await onSubmit(payload);
+        if (customResult && (customResult.booking || customResult.bookingReference)) {
+          createdBooking = customResult.booking || customResult;
+        }
+      }
+
+      // If not handled by custom return, send to backend API
+      if (!createdBooking) {
+        const response = await createBooking(payload);
+        createdBooking = response.booking;
+      }
+
+      setSubmittedData(createdBooking);
+    } catch (err) {
+      const errorMsg = err.message || 'Unable to create booking request. Please check your details and try again.';
+      setServerError(errorMsg);
+
+      // If backend returned field-specific validation errors, display them on fields
+      if (err.errors && typeof err.errors === 'object') {
+        setErrors((prev) => ({ ...prev, ...err.errors }));
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditRequest = () => {
     setSubmittedData(null);
+    setServerError(null);
   };
+
+  const handleResetForm = () => {
+    setSubmittedData(null);
+    setServerError(null);
+    setFormData({
+      fullName: '',
+      email: '',
+      phone: '',
+      travelerCount: '1',
+      travelDate: '',
+      additionalRequests: '',
+    });
+  };
+
+  // Determine if submitted data represents a persisted backend booking with reference
+  const isPersistedBooking = Boolean(submittedData && submittedData.bookingReference);
 
   return (
     <div className="booking-page" aria-labelledby="booking-page-title">
@@ -199,8 +263,115 @@ export default function BookingForm({
           </ol>
         </nav>
 
-        {/* Successful Client-Side Validation State */}
-        {submittedData ? (
+        {/* Persisted Database-Confirmed Booking State (TAMS-34) */}
+        {isPersistedBooking ? (
+          <div className="booking-confirmation-card booking-success-confirmed" role="region" aria-labelledby="confirmed-heading">
+            <div className="confirmation-badge-icon confirmation-badge-success" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            
+            <h1 id="confirmed-heading" className="confirmation-title">
+              Booking Request Confirmed!
+            </h1>
+            
+            <p className="confirmation-lead">
+              Your travel booking request has been successfully created and recorded in our database.
+            </p>
+
+            {/* Unique Booking Reference and Status Banner */}
+            <div className="booking-reference-banner" role="status" aria-live="polite">
+              <div className="ref-banner-col">
+                <span className="ref-banner-label">Booking Reference</span>
+                <span className="ref-banner-code" id="booking-reference-code">
+                  {submittedData.bookingReference}
+                </span>
+              </div>
+              <div className="ref-banner-divider" aria-hidden="true" />
+              <div className="ref-banner-col">
+                <span className="ref-banner-label">Initial Status</span>
+                <span className="status-pill status-pending" id="booking-status-badge">
+                  {submittedData.status || 'Pending'}
+                </span>
+              </div>
+            </div>
+
+            <div className="confirmation-note-box confirmation-note-success" role="note">
+              <span className="note-box-icon" aria-hidden="true">✓</span>
+              <p>
+                <strong>Reservation Recorded:</strong> Keep your booking reference <strong>{submittedData.bookingReference}</strong> handy. Our travel specialists will verify package availability for <strong>{title}</strong> and contact you at <strong>{submittedData.email}</strong>. No payment is required until confirmation.
+              </p>
+            </div>
+
+            {/* Summary of Saved Details */}
+            <div className="confirmation-details-grid">
+              <div className="conf-detail-item">
+                <span className="conf-label">Selected Package</span>
+                <span className="conf-value">{submittedData.packageTitle || title} ({submittedData.packageDestination || destination})</span>
+              </div>
+              <div className="conf-detail-item">
+                <span className="conf-label">Primary Traveler</span>
+                <span className="conf-value">{submittedData.fullName}</span>
+              </div>
+              <div className="conf-detail-item">
+                <span className="conf-label">Contact Email</span>
+                <span className="conf-value">{submittedData.email}</span>
+              </div>
+              <div className="conf-detail-item">
+                <span className="conf-label">Contact Phone</span>
+                <span className="conf-value">{submittedData.phone}</span>
+              </div>
+              <div className="conf-detail-item">
+                <span className="conf-label">Travel Date</span>
+                <span className="conf-value">{submittedData.travelDate}</span>
+              </div>
+              <div className="conf-detail-item">
+                <span className="conf-label">Number of Travelers</span>
+                <span className="conf-value">{submittedData.travelerCount} {submittedData.travelerCount === 1 ? 'person' : 'people'}</span>
+              </div>
+              {(submittedData.totalPrice || submittedData.estimatedTotal || formattedTotal) && (
+                <div className="conf-detail-item conf-total-item">
+                  <span className="conf-label">Total Booking Amount</span>
+                  <span className="conf-value conf-total-value">
+                    {submittedData.formattedTotal 
+                      ? submittedData.formattedTotal 
+                      : (submittedData.totalPrice 
+                          ? `₹${Number(submittedData.totalPrice).toLocaleString('en-IN')}` 
+                          : formattedTotal)}
+                  </span>
+                </div>
+              )}
+              {submittedData.additionalRequests && (
+                <div className="conf-detail-item conf-full-width">
+                  <span className="conf-label">Special Requests</span>
+                  <span className="conf-value conf-multiline">{submittedData.additionalRequests}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="confirmation-actions">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleResetForm}
+                id="book-another-btn"
+              >
+                + Book Another Trip
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={onBack}
+                id="return-to-details-btn"
+              >
+                ← Return to Package Details
+              </button>
+            </div>
+          </div>
+        ) : submittedData ? (
+          /* Client-Side Validation Preparation View (TAMS-33 compatibility) */
           <div className="booking-confirmation-card" role="region" aria-labelledby="confirmation-heading">
             <div className="confirmation-badge-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -305,6 +476,21 @@ export default function BookingForm({
                   </p>
                 </header>
 
+                {/* Global Server / Network Error Alert */}
+                {serverError && (
+                  <div className="form-server-error-banner" role="alert" id="booking-server-error">
+                    <div className="server-error-icon" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="server-error-content">
+                      <strong className="server-error-title">Submission Unsuccessful</strong>
+                      <p className="server-error-message">{serverError}</p>
+                    </div>
+                  </div>
+                )}
+
                 <form className="booking-form" onSubmit={handleSubmit} noValidate aria-label="Travel package booking form">
                   
                   {/* Field 1: Traveler Full Name */}
@@ -325,6 +511,7 @@ export default function BookingForm({
                       aria-required="true"
                       aria-invalid={Boolean(errors.fullName)}
                       aria-describedby={errors.fullName ? 'error-fullName' : undefined}
+                      disabled={isSubmitting}
                     />
                     {errors.fullName && (
                       <p id="error-fullName" className="form-error-msg" role="alert">
@@ -356,6 +543,7 @@ export default function BookingForm({
                         aria-required="true"
                         aria-invalid={Boolean(errors.email)}
                         aria-describedby={errors.email ? 'error-email' : undefined}
+                        disabled={isSubmitting}
                       />
                       {errors.email && (
                         <p id="error-email" className="form-error-msg" role="alert">
@@ -385,6 +573,7 @@ export default function BookingForm({
                         aria-required="true"
                         aria-invalid={Boolean(errors.phone)}
                         aria-describedby={errors.phone ? 'error-phone' : undefined}
+                        disabled={isSubmitting}
                       />
                       {errors.phone && (
                         <p id="error-phone" className="form-error-msg" role="alert">
@@ -418,6 +607,7 @@ export default function BookingForm({
                         aria-required="true"
                         aria-invalid={Boolean(errors.travelerCount)}
                         aria-describedby={errors.travelerCount ? 'error-travelerCount' : undefined}
+                        disabled={isSubmitting}
                       />
                       {errors.travelerCount && (
                         <p id="error-travelerCount" className="form-error-msg" role="alert">
@@ -446,6 +636,7 @@ export default function BookingForm({
                         aria-required="true"
                         aria-invalid={Boolean(errors.travelDate)}
                         aria-describedby={errors.travelDate ? 'error-travelDate' : undefined}
+                        disabled={isSubmitting}
                       />
                       {errors.travelDate && (
                         <p id="error-travelDate" className="form-error-msg" role="alert">
@@ -475,6 +666,7 @@ export default function BookingForm({
                       value={formData.additionalRequests}
                       onChange={handleChange}
                       aria-describedby="additional-requests-hint"
+                      disabled={isSubmitting}
                     />
                     <p id="additional-requests-hint" className="form-hint-text">
                       We'll do our best to accommodate special requests with our local partners.
@@ -487,8 +679,17 @@ export default function BookingForm({
                       type="submit"
                       className="btn btn-primary btn-submit-booking"
                       id="submit-booking-btn"
+                      disabled={isSubmitting}
+                      aria-busy={isSubmitting}
                     >
-                      Submit Booking Request
+                      {isSubmitting ? (
+                        <>
+                          <span className="spinner-indicator" aria-hidden="true" />
+                          <span>Submitting Booking Request...</span>
+                        </>
+                      ) : (
+                        'Submit Booking Request'
+                      )}
                     </button>
                     {onBack && (
                       <button
@@ -496,6 +697,7 @@ export default function BookingForm({
                         className="btn btn-outline"
                         onClick={onBack}
                         id="cancel-booking-btn"
+                        disabled={isSubmitting}
                       >
                         Cancel
                       </button>
@@ -579,6 +781,7 @@ export default function BookingForm({
                     type="button"
                     className="btn btn-secondary btn-full-width"
                     onClick={onBack}
+                    disabled={isSubmitting}
                   >
                     ← Back to Package Details
                   </button>

@@ -135,15 +135,55 @@ Travelers often need to browse multiple travel options and contact agents manual
   - "No payment required right now" reassuring traveler guarantee notice.
 - **Confirmation State & Routing:**
   - When client validation succeeds, renders a clean acknowledgment view summarizing traveler details.
-  - Clearly communicates separation from backend integration: *"Database booking creation and reservation confirmation will be connected in TAMS-34."*
   - Seamless navigation back to package details view (`Back to Package Details` / `Cancel`) and URL state synchronization (`?package=id&action=book`).
+
+### 8. Booking Creation & Database Storage (Jira Story: TAMS-34)
+- **Embedded Database Architecture (`src/server/db/database.js`):**
+  - Robust SQLite storage powered by Node.js native `node:sqlite` (`DatabaseSync`), requiring zero external native C++ binary dependencies.
+  - Foreign key constraint enforcement (`PRAGMA foreign_keys = ON;`) and WAL journal mode (`PRAGMA journal_mode = WAL;`) for high concurrency and resilience.
+  - Persistent database file stored on disk (`data/voyara.db`), ensuring booking records survive application restarts.
+  - In-memory database mode (`:memory:`) support for ultra-fast, isolated automated testing.
+- **Automated Schema Migrations & Seeding (`src/server/db/migrations.js`):**
+  - Idempotent migration runner tracking applied migrations in a dedicated `migrations` table.
+  - Initial schema migration (`001_initial_schema.sql`) creating `packages` table, `bookings` table, and performance indexes (`idx_bookings_ref`, `idx_bookings_pkg`, `idx_bookings_status`).
+  - Automatic seed mechanism populating the package catalog from `SAMPLE_PACKAGES` if the catalog is empty.
+  - Dedicated CLI migration script executable via `npm run migrate`.
+- **Server-Side Validation Layer (`src/server/controllers/bookingController.js`):**
+  - Strict server-side verification of all incoming requests:
+    - **Full Name:** Required, trimmed, minimum 2 characters.
+    - **Email:** Required, RFC 5322 regex validation format.
+    - **Phone:** Required, valid 10-15 digit formatting.
+    - **Traveler Count:** Required, positive whole integer ($\ge 1$).
+    - **Travel Date:** Required, valid date format, cannot be in the past.
+    - **Package Verification:** Verifies the selected package exists in the database and is currently active; returns HTTP 404 or 400 with descriptive error details when nonexistent.
+  - Invalid requests are rejected with HTTP 400/404 without creating records in the database.
+- **Unique Booking Reference & Initial Status:**
+  - Generates unique, uppercase, human-readable booking references adhering to the project's convention: `BK-YYYYMMDD-XXXX` (e.g. `BK-20261020-Z3T3`).
+  - Sets the initial booking status to `Pending` for travel specialist review.
+  - Calculates transparent total booking cost based on package price and traveler count (`price × travelerCount`).
+  - Records ISO 8601 creation timestamps (`createdAt`, `updatedAt`).
+- **RESTful API Service & Vite Dev Server Integration (`src/server/apiHandler.js` & `src/server/viteApiPlugin.js`):**
+  - Seamless dev and preview server integration via Vite middleware plugin:
+    - `POST /api/bookings`: Validates payload, verifies package existence, creates booking record, and returns HTTP 201 with created booking.
+    - `GET /api/bookings/:reference`: Retrieves single booking by unique reference with joined package details.
+    - `GET /api/bookings`: Lists all bookings in descending chronological order.
+    - `GET /api/packages`: Retrieves active packages catalog from database.
+    - `GET /api/packages/:id`: Retrieves single package by identifier.
+  - Standalone Node HTTP server entry (`src/server/index.js`) runnable via `npm run server`.
+- **Frontend Integration & UX Resilience (`src/components/BookingForm.jsx` & `src/services/bookingService.js`):**
+  - Centralized client service layer (`src/services/bookingService.js`) handling API requests, network failures, and custom `BookingApiError` handling.
+  - **Duplicate Submission Prevention:** In-flight submission tracking (`isSubmitting`) disables the submit button and renders a spinning micro-indicator to prevent double-charging or duplicate reservations.
+  - **Confirmed Booking View:** Upon successful backend creation, renders the confirmed booking card displaying the unique booking reference code, status pill (`Pending`), package details, traveler summary, and "+ Book Another Trip" action.
+  - **Failure Handling & Preservation:** If a server or network failure occurs, renders a visible alert banner (`#booking-server-error`) while fully preserving user-entered input values so the traveler never loses their work.
 
 ---
 
 ## Technology Stack
 - **Frontend Framework:** React 19 + Vite 8
+- **Backend & API:** Node.js native HTTP server & Vite dev/preview server middleware (`/api/*`)
+- **Database & ORM:** SQLite via Node.js native `node:sqlite` (`DatabaseSync`), tracked SQL migrations
 - **Styling:** Pure Vanilla CSS with CSS Custom Properties, Flexbox, and CSS Grid
-- **Testing:** Vitest (94 unit & integration tests)
+- **Testing:** Vitest (118 unit & integration tests across 6 test suites)
 - **Linter & Code Quality:** Oxlint (0 warnings, 0 errors)
 - **Version Control:** Git & GitHub
 - **Project Management:** Jira
@@ -163,13 +203,26 @@ cd Voyara-TravelAgencyMgmgSystem
 npm install
 ```
 
-### 3. Run Development Server
+### 3. Run Database Migrations
 ```bash
+# Apply SQLite migrations and seed catalog packages
+npm run migrate
+```
+
+### 4. Run Development Server
+```bash
+# Starts Vite dev server with embedded backend API middleware (/api/*)
 npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### 4. Run Tests, Linting & Build
+### 5. Run Standalone Backend Server (Optional)
+```bash
+# Starts standalone Node API server on port 3001
+npm run server
+```
+
+### 6. Run Tests, Linting & Build
 ```bash
 # Run unit & integration tests
 npm test
@@ -188,7 +241,7 @@ npm run build
 Voyara-TravelAgencyMgmgSystem/
 ├── src/
 │   ├── components/
-│   │   ├── BookingForm.jsx             # Booking request form with validation & summary
+│   │   ├── BookingForm.jsx             # Booking request form with validation, server integration & confirmation
 │   │   ├── BudgetFilter.jsx            # Min/max budget filter controls & validation
 │   │   ├── DestinationSearch.jsx       # Destination search bar with clear button
 │   │   ├── DetailsPlaceholderModal.jsx # Accessible preview dialog
@@ -203,7 +256,23 @@ Voyara-TravelAgencyMgmgSystem/
 │   │   └── PackageSection.jsx          # Package listing section, toolbar, search & grid
 │   ├── data/
 │   │   └── packages.js                 # Sample package dataset with itineraries & inclusions
+│   ├── server/
+│   │   ├── controllers/
+│   │   │   └── bookingController.js    # Server-side validation, reference generation & booking logic
+│   │   ├── db/
+│   │   │   ├── migrations/
+│   │   │   │   └── 001_initial_schema.sql # DDL for packages, bookings, indexes
+│   │   │   ├── database.js             # SQLite connection & instance management (node:sqlite)
+│   │   │   ├── migrations.js           # Idempotent migration runner & package catalog seeder
+│   │   │   └── runMigrationsCli.js     # CLI runner for npm run migrate
+│   │   ├── models/
+│   │   │   ├── bookingModel.js         # Booking persistence, reference generation & queries
+│   │   │   └── packageModel.js         # Package database queries & deserialization
+│   │   ├── apiHandler.js               # Central API request router (/api/packages, /api/bookings)
+│   │   ├── index.js                    # Standalone Node.js HTTP server entry
+│   │   └── viteApiPlugin.js            # Vite plugin for seamless dev/preview API middleware
 │   ├── services/
+│   │   ├── bookingService.js           # Client-side API service for booking creation & retrieval
 │   │   └── packageService.js           # API retrieval, getPackageById & response normalization
 │   ├── utils/
 │   │   └── bookingValidation.js        # Email, phone, date, and traveler count validators
@@ -211,6 +280,7 @@ Voyara-TravelAgencyMgmgSystem/
 │   ├── index.css                       # Full-width design system & styles
 │   └── main.jsx                        # Entry point
 ├── tests/
+│   ├── bookingBackend.test.js          # TAMS-34 database, migrations, API, validation & integration tests
 │   ├── bookingForm.test.js             # TAMS-33 booking form validation & UI tests
 │   ├── budgetFilter.test.js            # TAMS-10 budget filter unit & integration tests
 │   ├── destinationSearch.test.js       # TAMS-24/TAMS-25 search interface & logic tests
@@ -218,6 +288,7 @@ Voyara-TravelAgencyMgmgSystem/
 │   └── packageListing.test.js          # TAMS-7/TAMS-8 data retrieval & state tests
 ├── index.html                          # HTML shell with Google Fonts & SEO tags
 ├── package.json
+├── vite.config.js
 └── README.md
 ```
 
@@ -235,10 +306,13 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-31:** Display Itinerary and Inclusions
 - [x] **TAMS-32:** Validate Package Details and Retrieval
 - [x] **TAMS-33:** Build Booking Form
-- [ ] **TAMS-34:** Booking Submission & Backend Integration
+- [x] **TAMS-34:** Booking Submission & Backend Integration
 - [ ] **TAMS-12:** Booking Request Submission & Status Tracking
+- [ ] **TAMS-13:** Booking Status Tracking
+- [ ] **TAMS-14:** Agent Booking Confirmation & Rejection
 
 ---
 
 ## License
 Private — Voyara Travel Agency Management System.
+
