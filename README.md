@@ -13,11 +13,12 @@ An academic Jira and Agile project management learning exercise using a Travel A
 Travelers often need to browse multiple travel options and contact agents manually to understand package details and booking availability. TAMS centralizes this discovery process through a structured, responsive platform for travel package exploration and booking workflows.
 
 ### Objectives
+- PRIMARY OBJECTIVE: **Practice industry-standard Agile project management using Jira stories and sprints.**
 - Display available travel packages in a clean, intuitive, and modern interface.
 - Help travelers compare destinations, durations, and transparent budgets.
 - Present package itineraries, pricing in Indian Rupees (`₹`), and key features.
 - Provide a robust foundation for booking submissions and status tracking.
-- Practice industry-standard Agile project management using Jira stories and sprints.
+
 
 ---
 
