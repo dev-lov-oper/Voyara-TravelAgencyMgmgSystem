@@ -314,6 +314,3 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 
 ---
 
-## License
-Private — Voyara Travel Agency Management System.
-
