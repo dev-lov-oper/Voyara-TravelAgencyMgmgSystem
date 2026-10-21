@@ -597,11 +597,15 @@ describe('TAMS-34: Frontend Integration & Visual State Validation', () => {
       React.createElement(BookingForm, {
         pkg: sampleGoa,
         onBack: () => {},
+        initialIsSubmitting: true,
       })
     );
 
     expect(html).toContain('id="submit-booking-btn"');
-    expect(html).toContain('Submit Booking Request');
+    expect(html).toContain('disabled=""');
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain('spinner-indicator');
+    expect(html).toContain('Submitting Booking Request...');
     expect(html).toContain('btn-submit-booking');
   });
 });

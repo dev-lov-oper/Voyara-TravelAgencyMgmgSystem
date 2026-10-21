@@ -22,6 +22,7 @@ import { createBooking } from '../services/bookingService.js';
  * @param {Object} [props.initialErrors] - Initial form validation errors
  * @param {Object|null} [props.initialSubmittedData] - Initial submitted confirmation data
  * @param {string|null} [props.initialServerError] - Initial server error message
+ * @param {boolean} [props.initialIsSubmitting=false] - Initial in-flight submission state
  */
 export default function BookingForm({
   pkg,
@@ -31,6 +32,7 @@ export default function BookingForm({
   initialErrors = {},
   initialSubmittedData = null,
   initialServerError = null,
+  initialIsSubmitting = false,
 }) {
   // Form input state
   const [formData, setFormData] = useState({
@@ -49,7 +51,7 @@ export default function BookingForm({
   const [serverError, setServerError] = useState(initialServerError);
 
   // In-flight submission state (prevents duplicate submissions)
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(initialIsSubmitting);
 
   // Submission / confirmation state
   const [submittedData, setSubmittedData] = useState(initialSubmittedData);
@@ -91,6 +93,11 @@ export default function BookingForm({
 
   const validate = () => {
     const newErrors = {};
+
+    // 0. Selected Package (required)
+    if (!pkg || !pkg.id) {
+      newErrors.packageId = 'A valid travel package must be selected.';
+    }
 
     // 1. Traveler Full Name (required)
     if (!formData.fullName || !formData.fullName.trim()) {
@@ -233,6 +240,7 @@ export default function BookingForm({
             onClick={onBack}
             id="back-to-details-link"
             aria-label="Return to package details"
+            disabled={isSubmitting}
           >
             <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -242,19 +250,19 @@ export default function BookingForm({
 
           <ol className="details-breadcrumbs">
             <li>
-              <button type="button" className="crumb-btn" onClick={onBack}>
+              <button type="button" className="crumb-btn" onClick={onBack} disabled={isSubmitting}>
                 Home
               </button>
             </li>
             <li aria-hidden="true" className="crumb-sep">/</li>
             <li>
-              <button type="button" className="crumb-btn" onClick={onBack}>
+              <button type="button" className="crumb-btn" onClick={onBack} disabled={isSubmitting}>
                 Packages
               </button>
             </li>
             <li aria-hidden="true" className="crumb-sep">/</li>
             <li>
-              <button type="button" className="crumb-btn" onClick={onBack}>
+              <button type="button" className="crumb-btn" onClick={onBack} disabled={isSubmitting}>
                 {destination}
               </button>
             </li>
@@ -477,7 +485,7 @@ export default function BookingForm({
                 </header>
 
                 {/* Global Server / Network Error Alert */}
-                {serverError && (
+                {(serverError || errors.packageId) && (
                   <div className="form-server-error-banner" role="alert" id="booking-server-error">
                     <div className="server-error-icon" aria-hidden="true">
                       <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor">
@@ -486,7 +494,7 @@ export default function BookingForm({
                     </div>
                     <div className="server-error-content">
                       <strong className="server-error-title">Submission Unsuccessful</strong>
-                      <p className="server-error-message">{serverError}</p>
+                      <p className="server-error-message">{serverError || errors.packageId}</p>
                     </div>
                   </div>
                 )}

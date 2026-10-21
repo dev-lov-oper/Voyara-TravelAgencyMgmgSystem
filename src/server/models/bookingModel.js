@@ -68,9 +68,10 @@ export function mapBookingRow(row) {
  * @returns {Object} Newly created booking object
  */
 export function createBooking(db, data) {
-  const reference = data.bookingReference || generateBookingReference();
   const status = data.status || 'Pending';
-  const additionalRequests = (data.additionalRequests || '').trim();
+  const additionalRequests = typeof data.additionalRequests === 'string'
+    ? data.additionalRequests.trim()
+    : String(data.additionalRequests || '').trim();
   const nowIso = new Date().toISOString();
 
   const insertStmt = db.prepare(`
@@ -92,22 +93,38 @@ export function createBooking(db, data) {
     )
   `);
 
-  insertStmt.run(
-    reference,
-    data.packageId,
-    data.fullName.trim(),
-    data.email.trim(),
-    data.phone.trim(),
-    Number(data.travelerCount),
-    data.travelDate,
-    additionalRequests,
-    status,
-    Number(data.totalPrice),
-    nowIso,
-    nowIso
-  );
+  const maxAttempts = data.bookingReference ? 1 : 3;
 
-  return getBookingByReference(db, reference);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const candidateRef = data.bookingReference || generateBookingReference();
+    try {
+      insertStmt.run(
+        candidateRef,
+        data.packageId,
+        (data.fullName || '').trim(),
+        (data.email || '').trim(),
+        (data.phone || '').trim(),
+        Number(data.travelerCount),
+        data.travelDate,
+        additionalRequests,
+        status,
+        Number(data.totalPrice),
+        nowIso,
+        nowIso
+      );
+
+      return getBookingByReference(db, candidateRef);
+    } catch (err) {
+      const isUniqueCollision =
+        err &&
+        typeof err.message === 'string' &&
+        err.message.includes('UNIQUE constraint failed: bookings.booking_reference');
+      if (isUniqueCollision && attempt < maxAttempts) {
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 /**

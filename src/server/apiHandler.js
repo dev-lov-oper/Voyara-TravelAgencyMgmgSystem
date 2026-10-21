@@ -11,16 +11,16 @@ import {
   handleGetBookingByReference,
 } from './controllers/bookingController.js';
 
-let initialized = false;
+const initializedDbs = new WeakSet();
 
 /**
  * Ensures the database and migrations are initialized.
  */
 export function ensureServerInitialized(db = null) {
-  if (!initialized) {
-    const targetDb = db || getDefaultDatabase();
+  const targetDb = db || getDefaultDatabase();
+  if (!initializedDbs.has(targetDb)) {
     runMigrations(targetDb);
-    initialized = true;
+    initializedDbs.add(targetDb);
   }
 }
 
@@ -116,7 +116,16 @@ export async function handleApiRequest(req, res, db = null) {
 
     // 3. POST /api/bookings (Create booking request)
     if (method === 'POST' && (pathname === '/api/bookings' || pathname === '/api/bookings/')) {
-      const body = await parseJsonBody(req);
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (parseErr) {
+        sendJson(400, {
+          success: false,
+          message: parseErr.message || 'Malformed JSON in request body.',
+        });
+        return;
+      }
       const result = handleCreateBooking(targetDb, body);
       sendJson(result.status, result.body);
       return;

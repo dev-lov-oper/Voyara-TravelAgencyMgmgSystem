@@ -18,7 +18,12 @@ import { createBooking, getBookingByReference } from '../models/bookingModel.js'
  * @param {Object} payload
  * @returns {Object} Object containing errors map (empty if valid)
  */
-export function validateBookingPayload(payload = {}) {
+export function validateBookingPayload(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return {
+      payload: 'Booking request body must be a valid JSON object.',
+    };
+  }
   const errors = {};
 
   // 1. Package ID (required)
