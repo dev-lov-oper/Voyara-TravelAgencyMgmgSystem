@@ -308,7 +308,7 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-32:** Validate Package Details and Retrieval
 - [x] **TAMS-33:** Build Booking Form
 - [x] **TAMS-34:** Booking Submission & Backend Integration
-- [ ] **TAMS-12:** Booking Request Submission & Status Tracking
+- [x] **TAMS-12:** Booking Request Submission & Status Tracking
 - [ ] **TAMS-13:** Booking Status Tracking
 - [ ] **TAMS-14:** Agent Booking Confirmation & Rejection
 
