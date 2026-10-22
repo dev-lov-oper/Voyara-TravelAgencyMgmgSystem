@@ -98,21 +98,37 @@ export async function getBookingByReference(reference, { signal } = {}) {
   if (!reference) return null;
   const endpoint = `${API_BASE_URL}/bookings/${encodeURIComponent(reference)}`;
 
-  const response = await fetch(endpoint, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-    },
-    signal,
-  });
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+      signal,
+    });
 
-  if (!response.ok) {
-    if (response.status === 404) return null;
-    throw new BookingApiError(`Failed to fetch booking (HTTP ${response.status})`, response.status);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      if (response.status === 404) return null;
+      const errorMessage = data.message || `Failed to fetch booking (HTTP ${response.status}: ${response.statusText})`;
+      throw new BookingApiError(errorMessage, response.status, data.errors || {});
+    }
+
+    return data.booking || data;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw error;
+    }
+    if (error instanceof BookingApiError) {
+      throw error;
+    }
+    throw new BookingApiError(
+      error.message || 'Unable to connect to the booking service. Please check your network connection and try again.',
+      0,
+      {}
+    );
   }
-
-  const data = await response.json();
-  return data.booking || data;
 }
 
 /**
@@ -125,18 +141,35 @@ export async function getBookingByReference(reference, { signal } = {}) {
 export async function getAllBookings({ signal } = {}) {
   const endpoint = `${API_BASE_URL}/bookings`;
 
-  const response = await fetch(endpoint, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-    },
-    signal,
-  });
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+      signal,
+    });
 
-  if (!response.ok) {
-    throw new BookingApiError(`Failed to fetch bookings (HTTP ${response.status})`, response.status);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMessage = data.message || `Failed to fetch bookings (HTTP ${response.status}: ${response.statusText})`;
+      throw new BookingApiError(errorMessage, response.status, data.errors || {});
+    }
+
+    return Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []);
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw error;
+    }
+    if (error instanceof BookingApiError) {
+      throw error;
+    }
+    throw new BookingApiError(
+      error.message || 'Unable to connect to the booking service. Please check your network connection and try again.',
+      0,
+      {}
+    );
   }
-
-  const data = await response.json();
-  return data.bookings || [];
 }
+

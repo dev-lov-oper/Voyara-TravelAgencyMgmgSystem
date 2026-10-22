@@ -28,6 +28,7 @@ export default function BookingForm({
   pkg,
   onBack,
   onSubmit,
+  onViewBookings,
   initialValues = {},
   initialErrors = {},
   initialSubmittedData = null,
@@ -368,6 +369,16 @@ export default function BookingForm({
               >
                 + Book Another Trip
               </button>
+              {onViewBookings && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={onViewBookings}
+                  id="view-status-btn"
+                >
+                  View Booking Status →
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-primary"
@@ -377,6 +388,7 @@ export default function BookingForm({
                 ← Return to Package Details
               </button>
             </div>
+
           </div>
         ) : submittedData ? (
           /* Client-Side Validation Preparation View (TAMS-33 compatibility) */

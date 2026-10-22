@@ -4,13 +4,26 @@ import HeroSection from './components/HeroSection';
 import PackageSection from './components/PackageSection';
 import PackageDetails from './components/PackageDetails';
 import BookingForm from './components/BookingForm';
+import BookingStatus from './components/BookingStatus';
 import Footer from './components/Footer';
 import { getTravelPackages } from './services/packageService';
 
-export default function App() {
+export default function App({ initialView } = {}) {
   const [packages, setPackages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // View state: 'catalog' | 'bookings'
+  const [currentView, setCurrentView] = useState(() => {
+    if (initialView) return initialView;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view');
+      if (viewParam === 'bookings' || viewParam === 'status') return 'bookings';
+      if (window.location.hash === '#booking-status') return 'bookings';
+    }
+    return 'catalog';
+  });
 
   // Routing / View state: URL ?package=pkg-id or state
   const [selectedPackageId, setSelectedPackageId] = useState(() => {
@@ -62,8 +75,10 @@ export default function App() {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const pkgParam = params.get('package');
+      const viewParam = params.get('view');
       setSelectedPackageId(pkgParam || null);
       setIsBooking(Boolean(pkgParam && (params.get('action') === 'book' || params.get('booking') === 'true')));
+      setCurrentView(viewParam === 'bookings' || viewParam === 'status' || window.location.hash === '#booking-status' ? 'bookings' : 'catalog');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -102,7 +117,7 @@ export default function App() {
   };
 
   const handleExploreScroll = () => {
-    if (selectedPackageId) {
+    if (selectedPackageId || currentView === 'bookings') {
       handleBackToListing();
     }
     setTimeout(() => {
@@ -113,15 +128,32 @@ export default function App() {
     }, 50);
   };
 
+  const handleNavigateToBookings = () => {
+    setSelectedPackageId(null);
+    setIsBooking(false);
+    setCurrentView('bookings');
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', 'bookings');
+      url.searchParams.delete('package');
+      url.searchParams.delete('action');
+      url.searchParams.delete('booking');
+      window.history.pushState({ view: 'bookings' }, '', url.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const handleOpenDetails = (pkg) => {
     const pkgId = pkg?.id || null;
     setSelectedPackageId(pkgId);
     setIsBooking(false);
+    setCurrentView('catalog');
     if (typeof window !== 'undefined' && pkgId) {
       const url = new URL(window.location.href);
       url.searchParams.set('package', pkgId);
       url.searchParams.delete('action');
       url.searchParams.delete('booking');
+      url.searchParams.delete('view');
       window.history.pushState({ packageId: pkgId }, '', url.toString());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -130,10 +162,12 @@ export default function App() {
   const handleStartBooking = (pkg) => {
     const pkgId = pkg?.id || selectedPackageId;
     setIsBooking(true);
+    setCurrentView('catalog');
     if (typeof window !== 'undefined' && pkgId) {
       const url = new URL(window.location.href);
       url.searchParams.set('package', pkgId);
       url.searchParams.set('action', 'book');
+      url.searchParams.delete('view');
       window.history.pushState({ packageId: pkgId, action: 'book' }, '', url.toString());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -145,6 +179,7 @@ export default function App() {
       const url = new URL(window.location.href);
       url.searchParams.delete('action');
       url.searchParams.delete('booking');
+      url.searchParams.delete('view');
       window.history.pushState({ packageId: selectedPackageId }, '', url.toString());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -153,11 +188,13 @@ export default function App() {
   const handleBackToListing = () => {
     setSelectedPackageId(null);
     setIsBooking(false);
+    setCurrentView('catalog');
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('package');
       url.searchParams.delete('action');
       url.searchParams.delete('booking');
+      url.searchParams.delete('view');
       window.history.pushState({}, '', url.pathname + (url.search ? url.search : ''));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -171,16 +208,26 @@ export default function App() {
   return (
     <div className="app-layout">
       {/* Navigation Bar */}
-      <Navbar onExploreClick={handleExploreScroll} />
+      <Navbar
+        onExploreClick={handleExploreScroll}
+        onBookingsClick={handleNavigateToBookings}
+        activeView={currentView === 'bookings' ? 'bookings' : selectedPackageId ? 'package' : 'packages'}
+      />
 
       {/* Main Content Area */}
       <main id="main-content" className="main-content">
-        {selectedPackageId ? (
+        {currentView === 'bookings' ? (
+          <BookingStatus
+            onExplorePackages={handleBackToListing}
+            onViewPackage={handleOpenDetails}
+          />
+        ) : selectedPackageId ? (
           isBooking ? (
             <BookingForm
               key={`booking-${selectedPackageId}`}
               pkg={selectedPackage}
               onBack={handleBackToDetails}
+              onViewBookings={handleNavigateToBookings}
             />
           ) : (
             <PackageDetails
@@ -218,7 +265,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <Footer onExploreClick={handleExploreScroll} />
+      <Footer onExploreClick={handleExploreScroll} onBookingsClick={handleNavigateToBookings} />
     </div>
   );
+
 }

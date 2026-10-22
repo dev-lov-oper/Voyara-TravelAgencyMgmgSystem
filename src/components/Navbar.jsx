@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function Navbar({ onExploreClick }) {
+export default function Navbar({ onExploreClick, onBookingsClick, activeView }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
@@ -14,7 +14,14 @@ export default function Navbar({ onExploreClick }) {
   const handleNavClick = (e, sectionId) => {
     e.preventDefault();
     closeMobileMenu();
-    if (sectionId === 'packages-section') {
+    if (sectionId === 'booking-status') {
+      if (onBookingsClick) {
+        onBookingsClick();
+      } else {
+        const el = document.getElementById('booking-status-heading') || document.getElementById('bookings-list');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (sectionId === 'packages-section') {
       if (onExploreClick) {
         onExploreClick();
       } else {
@@ -22,8 +29,12 @@ export default function Navbar({ onExploreClick }) {
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }
     } else if (sectionId === 'hero-section') {
-      const el = document.getElementById('hero-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      if (onExploreClick && activeView === 'bookings') {
+        onExploreClick();
+      } else {
+        const el = document.getElementById('hero-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
     } else if (sectionId === 'about-section') {
       const el = document.getElementById('about-section');
       if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -55,7 +66,7 @@ export default function Navbar({ onExploreClick }) {
             <li>
               <a 
                 href="#hero-section" 
-                className="nav-link"
+                className={`nav-link ${activeView === 'home' || (!activeView && activeView !== 'bookings') ? 'active' : ''}`}
                 onClick={(e) => handleNavClick(e, 'hero-section')}
               >
                 Home
@@ -64,10 +75,20 @@ export default function Navbar({ onExploreClick }) {
             <li>
               <a 
                 href="#packages-section" 
-                className="nav-link"
+                className={`nav-link ${activeView === 'packages' ? 'active' : ''}`}
                 onClick={(e) => handleNavClick(e, 'packages-section')}
               >
                 Explore Packages
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#booking-status" 
+                className={`nav-link ${activeView === 'bookings' ? 'active' : ''}`}
+                id="nav-booking-status"
+                onClick={(e) => handleNavClick(e, 'booking-status')}
+              >
+                My Bookings
               </a>
             </li>
             <li>
@@ -136,6 +157,16 @@ export default function Navbar({ onExploreClick }) {
             </li>
             <li>
               <a 
+                href="#booking-status" 
+                className={`mobile-nav-link ${activeView === 'bookings' ? 'active' : ''}`}
+                id="mobile-nav-booking-status"
+                onClick={(e) => handleNavClick(e, 'booking-status')}
+              >
+                My Bookings
+              </a>
+            </li>
+            <li>
+              <a 
                 href="#about-section" 
                 className="mobile-nav-link"
                 onClick={(e) => handleNavClick(e, 'about-section')}
@@ -158,3 +189,4 @@ export default function Navbar({ onExploreClick }) {
     </header>
   );
 }
+
