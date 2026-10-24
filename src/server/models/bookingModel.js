@@ -193,3 +193,31 @@ export function getAllBookings(db) {
 
   return rows.map(mapBookingRow);
 }
+
+/**
+ * Retrieves all bookings belonging to a specific customer email.
+ * Ensures data isolation between different customer accounts.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} email - Customer email address
+ * @returns {Array<Object>}
+ */
+export function getBookingsByCustomer(db, email) {
+  if (!email || typeof email !== 'string') return [];
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const rows = db.prepare(`
+    SELECT 
+      b.*,
+      p.title as package_title,
+      p.destination as package_destination,
+      p.price as package_price
+    FROM bookings b
+    LEFT JOIN packages p ON b.package_id = p.id
+    WHERE LOWER(b.email) = ?
+    ORDER BY b.created_at DESC, b.id DESC
+  `).all(normalizedEmail);
+
+  return rows.map(mapBookingRow);
+}
+

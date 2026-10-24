@@ -5,11 +5,15 @@
 import { getDefaultDatabase } from './db/database.js';
 import { runMigrations } from './db/migrations.js';
 import { getAllPackages, getPackageById } from './models/packageModel.js';
-import { getAllBookings } from './models/bookingModel.js';
 import {
   handleCreateBooking,
+
   handleGetBookingByReference,
+  handleCustomerLogin,
+  handleGetCustomerBookings,
 } from './controllers/bookingController.js';
+import { authenticateCustomerRequest } from './auth.js';
+
 
 const initializedDbs = new WeakSet();
 
@@ -77,7 +81,7 @@ export async function handleApiRequest(req, res, db = null) {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Accept',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Auth-Token, X-Customer-Token',
     });
     res.end(JSON.stringify(payload));
   };
@@ -87,13 +91,30 @@ export async function handleApiRequest(req, res, db = null) {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Accept',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Auth-Token, X-Customer-Token',
     });
     res.end();
     return;
   }
 
   try {
+    // 0. POST /api/auth/customer-session or /api/auth/login (Customer authentication session)
+    if (method === 'POST' && (pathname === '/api/auth/customer-session' || pathname === '/api/auth/login')) {
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (parseErr) {
+        sendJson(400, {
+          success: false,
+          message: parseErr.message || 'Malformed JSON in request body.',
+        });
+        return;
+      }
+      const result = handleCustomerLogin(targetDb, body);
+      sendJson(result.status, result.body);
+      return;
+    }
+
     // 1. GET /api/packages
     if (method === 'GET' && (pathname === '/api/packages' || pathname === '/api/packages/')) {
       const packages = getAllPackages(targetDb, { activeOnly: true });
@@ -135,15 +156,26 @@ export async function handleApiRequest(req, res, db = null) {
     const bookingMatch = pathname.match(/^\/api\/bookings\/([a-zA-Z0-9_-]+)$/);
     if (method === 'GET' && bookingMatch) {
       const reference = bookingMatch[1];
-      const result = handleGetBookingByReference(targetDb, reference);
+      const authResult = authenticateCustomerRequest(req);
+      const customer = authResult.authenticated ? authResult.customer : null;
+      const result = handleGetBookingByReference(targetDb, reference, customer);
       sendJson(result.status, result.body);
       return;
     }
 
-    // 5. GET /api/bookings (List all bookings)
+    // 5. GET /api/bookings (Retrieve booking records for the authenticated customer)
     if (method === 'GET' && (pathname === '/api/bookings' || pathname === '/api/bookings/')) {
-      const bookings = getAllBookings(targetDb);
-      sendJson(200, { success: true, bookings });
+      const authResult = authenticateCustomerRequest(req);
+      if (!authResult.authenticated) {
+        sendJson(authResult.status || 401, {
+          success: false,
+          message: authResult.error || 'Authentication required to access booking records.',
+        });
+        return;
+      }
+
+      const result = handleGetCustomerBookings(targetDb, authResult.customer);
+      sendJson(result.status, result.body);
       return;
     }
 

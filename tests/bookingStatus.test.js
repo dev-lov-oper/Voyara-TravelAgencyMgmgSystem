@@ -10,6 +10,8 @@ import { runMigrations } from '../src/server/db/migrations.js';
 import { createBooking } from '../src/server/models/bookingModel.js';
 import { handleApiRequest } from '../src/server/apiHandler.js';
 import { getAllBookings, getBookingByReference, BookingApiError } from '../src/services/bookingService.js';
+import { createCustomerToken } from '../src/server/auth.js';
+
 
 describe('TAMS-36: Booking Status Interface & Data Model Validation', () => {
   const sampleBookings = [
@@ -392,10 +394,14 @@ describe('TAMS-36: Booking Status Interface & Data Model Validation', () => {
       expect(created.status).toBe('Pending');
       expect(created.travelerCount).toBe(3);
 
-      // 2. Query all bookings via API handler
+      // 2. Query customer bookings via API handler with authorization token
+      const token = createCustomerToken({ email: created.email, fullName: created.fullName });
       const mockReq = {
         method: 'GET',
         url: '/api/bookings',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
         on: () => {},
       };
 

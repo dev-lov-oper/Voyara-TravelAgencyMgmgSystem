@@ -3,6 +3,8 @@
  * Handles client-side API communication for booking creation and retrieval.
  */
 
+import { getStoredCustomerToken, setStoredCustomerSession } from './authService.js';
+
 // Safe environment accessor working in both Vite and Node.js environments
 const getEnv = (key) => {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
@@ -30,6 +32,7 @@ export class BookingApiError extends Error {
 
 /**
  * Submits a new booking request to the backend API.
+ * Automatically saves customer auth session if a token is issued by the backend.
  *
  * @param {Object} bookingData - Booking details
  * @param {string} bookingData.packageId
@@ -64,10 +67,17 @@ export async function createBooking(bookingData, { signal } = {}) {
       throw new BookingApiError(errorMessage, response.status, data.errors || {});
     }
 
+    // Persist authenticated customer session if token is provided
+    if (data.token) {
+      setStoredCustomerSession(data.token, data.customer);
+    }
+
     return {
       success: true,
       message: data.message || 'Booking created successfully.',
       booking: data.booking || data,
+      token: data.token || null,
+      customer: data.customer || null,
     };
   } catch (error) {
     if (error.name === 'AbortError') {
@@ -91,19 +101,26 @@ export async function createBooking(bookingData, { signal } = {}) {
  *
  * @param {string} reference
  * @param {Object} [options]
+ * @param {string} [options.token] - Optional explicit auth token override
  * @param {AbortSignal} [options.signal]
  * @returns {Promise<Object|null>}
  */
-export async function getBookingByReference(reference, { signal } = {}) {
+export async function getBookingByReference(reference, { token, signal } = {}) {
   if (!reference) return null;
   const endpoint = `${API_BASE_URL}/bookings/${encodeURIComponent(reference)}`;
+
+  const effectiveToken = token || getStoredCustomerToken();
+  const headers = {
+    'Accept': 'application/json',
+  };
+  if (effectiveToken) {
+    headers['Authorization'] = `Bearer ${effectiveToken}`;
+  }
 
   try {
     const response = await fetch(endpoint, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers,
       signal,
     });
 
@@ -132,21 +149,29 @@ export async function getBookingByReference(reference, { signal } = {}) {
 }
 
 /**
- * Retrieves all bookings from the backend API.
+ * Retrieves booking records for the authenticated customer from the backend API.
+ * Attaches the customer's authorization token to enforce customer-level data isolation.
  *
  * @param {Object} [options]
+ * @param {string} [options.token] - Optional explicit auth token override
  * @param {AbortSignal} [options.signal]
  * @returns {Promise<Array<Object>>}
  */
-export async function getAllBookings({ signal } = {}) {
+export async function getAllBookings({ token, signal } = {}) {
   const endpoint = `${API_BASE_URL}/bookings`;
+
+  const effectiveToken = token || getStoredCustomerToken();
+  const headers = {
+    'Accept': 'application/json',
+  };
+  if (effectiveToken) {
+    headers['Authorization'] = `Bearer ${effectiveToken}`;
+  }
 
   try {
     const response = await fetch(endpoint, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers,
       signal,
     });
 
@@ -172,4 +197,8 @@ export async function getAllBookings({ signal } = {}) {
     );
   }
 }
+
+// Semantic alias for customer booking retrieval (TAMS-37)
+export const getCustomerBookings = getAllBookings;
+
 

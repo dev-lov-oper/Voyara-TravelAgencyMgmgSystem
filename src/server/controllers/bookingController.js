@@ -10,7 +10,9 @@ import {
   isValidTravelDate,
 } from '../../utils/bookingValidation.js';
 import { getPackageById } from '../models/packageModel.js';
-import { createBooking, getBookingByReference } from '../models/bookingModel.js';
+import { createBooking, getBookingByReference, getBookingsByCustomer } from '../models/bookingModel.js';
+import { createCustomerToken } from '../auth.js';
+
 
 /**
  * Validates incoming booking request payload on the server.
@@ -140,12 +142,22 @@ export function handleCreateBooking(db, body) {
       bookingReference: body.bookingReference, // Optional for testing
     });
 
+    const token = createCustomerToken({
+      email: booking.email,
+      fullName: booking.fullName,
+    });
+
     return {
       status: 201,
       body: {
         success: true,
         message: 'Booking request created successfully.',
         booking,
+        token,
+        customer: {
+          email: booking.email,
+          fullName: booking.fullName,
+        },
       },
     };
   } catch (error) {
@@ -162,13 +174,14 @@ export function handleCreateBooking(db, body) {
 }
 
 /**
- * Handles retrieval of a booking by reference.
+ * Handles retrieval of a booking by reference, with optional customer authorization verification.
  *
  * @param {import('node:sqlite').DatabaseSync} db
  * @param {string} reference
+ * @param {Object} [authenticatedCustomer]
  * @returns {{ status: number, body: Object }}
  */
-export function handleGetBookingByReference(db, reference) {
+export function handleGetBookingByReference(db, reference, authenticatedCustomer = null) {
   if (!reference) {
     return {
       status: 400,
@@ -187,6 +200,20 @@ export function handleGetBookingByReference(db, reference) {
     };
   }
 
+  // If request is authenticated, enforce customer isolation
+  if (authenticatedCustomer && authenticatedCustomer.email) {
+    const isOwner = booking.email && booking.email.toLowerCase() === authenticatedCustomer.email.toLowerCase();
+    if (!isOwner) {
+      return {
+        status: 403,
+        body: {
+          success: false,
+          message: 'You do not have permission to access this booking record.',
+        },
+      };
+    }
+  }
+
   return {
     status: 200,
     body: {
@@ -195,3 +222,112 @@ export function handleGetBookingByReference(db, reference) {
     },
   };
 }
+
+/**
+ * Handles customer authentication / login via registered email and optional booking reference.
+ * Returns a signed token scoped to the customer.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {Object} credentials
+ * @returns {{ status: number, body: Object }}
+ */
+export function handleCustomerLogin(db, credentials) {
+  if (!credentials || typeof credentials !== 'object') {
+    return {
+      status: 400,
+      body: { success: false, message: 'Invalid login request payload.' },
+    };
+  }
+
+  const email = (credentials.email || '').trim().toLowerCase();
+  if (!email || !isValidEmail(email)) {
+    return {
+      status: 400,
+      body: { success: false, message: 'A valid customer email address is required.' },
+    };
+  }
+
+  const reference = (credentials.bookingReference || '').trim();
+
+  // Find customer's bookings in the database
+  const customerBookings = getBookingsByCustomer(db, email);
+  if (customerBookings.length === 0) {
+    return {
+      status: 404,
+      body: {
+        success: false,
+        message: `No booking records found for email address '${email}'.`,
+      },
+    };
+  }
+
+  // If a booking reference is provided, verify it belongs to this customer
+  if (reference) {
+    const matchingRef = customerBookings.find(
+      (b) => b.bookingReference.toLowerCase() === reference.toLowerCase()
+    );
+    if (!matchingRef) {
+      return {
+        status: 404,
+        body: {
+          success: false,
+          message: `Booking reference '${reference}' does not match the provided email address.`,
+        },
+      };
+    }
+  }
+
+  const primaryBooking = customerBookings[0];
+  const token = createCustomerToken({
+    email,
+    fullName: primaryBooking.fullName,
+  });
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      message: 'Authentication successful.',
+      token,
+      customer: {
+        email,
+        fullName: primaryBooking.fullName,
+      },
+      bookingsCount: customerBookings.length,
+    },
+  };
+}
+
+/**
+ * Handles retrieving bookings for the authenticated customer.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {Object} authenticatedCustomer
+ * @returns {{ status: number, body: Object }}
+ */
+export function handleGetCustomerBookings(db, authenticatedCustomer) {
+  if (!authenticatedCustomer || !authenticatedCustomer.email) {
+    return {
+      status: 401,
+      body: {
+        success: false,
+        message: 'Authentication required to access booking records.',
+      },
+    };
+  }
+
+  const bookings = getBookingsByCustomer(db, authenticatedCustomer.email);
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      customer: {
+        email: authenticatedCustomer.email,
+        fullName: authenticatedCustomer.fullName || '',
+      },
+      bookings,
+    },
+  };
+}
+
