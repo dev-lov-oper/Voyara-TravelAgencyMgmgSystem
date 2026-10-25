@@ -2,7 +2,7 @@ import React from 'react';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-export default function Footer({ onExploreClick, onBookingsClick, onAgentClick }) {
+export default function Footer({ onHomeClick, onExploreClick, onBookingsClick, onAgentClick }) {
 
   const handleNavClick = (e, sectionId) => {
     e.preventDefault();
@@ -28,8 +28,18 @@ export default function Footer({ onExploreClick, onBookingsClick, onAgentClick }
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }
     } else if (sectionId === 'hero-section') {
-      const el = document.getElementById('hero-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      if (onHomeClick) {
+        onHomeClick();
+      } else if (onExploreClick) {
+        onExploreClick();
+      } else {
+        const el = document.getElementById('hero-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        } else if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
     } else if (sectionId === 'about-section') {
       const el = document.getElementById('about-section');
       if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -41,7 +51,12 @@ export default function Footer({ onExploreClick, onBookingsClick, onAgentClick }
       <div className="footer-container">
         <div className="footer-top">
           <div className="footer-brand-column">
-            <div className="brand-logo footer-logo">
+            <a 
+              href="#hero-section"
+              className="brand-logo footer-logo"
+              onClick={(e) => handleNavClick(e, 'hero-section')}
+              aria-label="Voyara Home"
+            >
               <span className="brand-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -49,7 +64,7 @@ export default function Footer({ onExploreClick, onBookingsClick, onAgentClick }
                 </svg>
               </span>
               <span className="brand-name">Voyara</span>
-            </div>
+            </a>
             <p className="footer-description">
               Voyara provides thoughtfully curated travel experiences, connecting travelers with peaceful coastlines, majestic mountain trails, and rich cultural destinations.
             </p>

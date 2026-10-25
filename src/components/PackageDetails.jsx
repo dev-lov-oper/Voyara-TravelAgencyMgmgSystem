@@ -8,6 +8,7 @@ import React, { useState } from 'react';
  * @param {Object} props
  * @param {Object|null} props.pkg - Selected normalized package object
  * @param {Function} props.onBack - Callback to return to the package listing
+ * @param {Function} [props.onHome] - Callback to return to the home page hero view
  * @param {Function} [props.onBook] - Callback to transition to the booking form
  * @param {boolean} [props.isLoading] - Loading indicator state
  * @param {string|null} [props.error] - Error message state
@@ -16,6 +17,7 @@ import React, { useState } from 'react';
 export default function PackageDetails({
   pkg,
   onBack,
+  onHome,
   onBook,
   isLoading = false,
   error = null,
@@ -139,7 +141,12 @@ export default function PackageDetails({
 
           <ol className="details-breadcrumbs">
             <li>
-              <button type="button" className="crumb-btn" onClick={onBack}>
+              <button
+                type="button"
+                className="crumb-btn"
+                onClick={onHome || onBack}
+                aria-label="Return to Home"
+              >
                 Home
               </button>
             </li>

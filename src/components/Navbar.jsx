@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function Navbar({ onExploreClick, onBookingsClick, onAgentClick, activeView }) {
+export default function Navbar({ onHomeClick, onExploreClick, onBookingsClick, onAgentClick, activeView }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
@@ -36,11 +36,17 @@ export default function Navbar({ onExploreClick, onBookingsClick, onAgentClick, 
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }
     } else if (sectionId === 'hero-section') {
-      if (onExploreClick && (activeView === 'bookings' || activeView === 'agent')) {
+      if (onHomeClick) {
+        onHomeClick();
+      } else if (onExploreClick && (activeView === 'bookings' || activeView === 'agent' || activeView === 'package')) {
         onExploreClick();
       } else {
         const el = document.getElementById('hero-section');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        } else if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }
     } else if (sectionId === 'about-section') {
       const el = document.getElementById('about-section');

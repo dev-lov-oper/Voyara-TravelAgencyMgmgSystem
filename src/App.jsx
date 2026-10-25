@@ -124,8 +124,31 @@ export default function App({ initialView } = {}) {
     setRetryKey((prev) => prev + 1);
   };
 
+  const handleNavigateToHome = () => {
+    setSelectedPackageId(null);
+    setIsBooking(false);
+    setCurrentView('catalog');
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('package');
+      url.searchParams.delete('action');
+      url.searchParams.delete('booking');
+      url.searchParams.delete('view');
+      window.history.pushState({}, '', url.pathname + (url.search ? url.search : ''));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setTimeout(() => {
+      const el = document.getElementById('hero-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      } else if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 50);
+  };
+
   const handleExploreScroll = () => {
-    if (selectedPackageId || currentView === 'bookings') {
+    if (selectedPackageId || currentView === 'bookings' || currentView === 'agent') {
       handleBackToListing();
     }
     setTimeout(() => {
@@ -232,6 +255,7 @@ export default function App({ initialView } = {}) {
     <div className="app-layout">
       {/* Navigation Bar */}
       <Navbar
+        onHomeClick={handleNavigateToHome}
         onExploreClick={handleExploreScroll}
         onBookingsClick={handleNavigateToBookings}
         onAgentClick={handleNavigateToAgent}
@@ -262,6 +286,7 @@ export default function App({ initialView } = {}) {
               key={selectedPackageId || 'details'}
               pkg={selectedPackage}
               onBack={handleBackToListing}
+              onHome={handleNavigateToHome}
               onBook={handleStartBooking}
               isLoading={isLoading}
               error={error}
@@ -294,6 +319,7 @@ export default function App({ initialView } = {}) {
 
       {/* Footer */}
       <Footer
+        onHomeClick={handleNavigateToHome}
         onExploreClick={handleExploreScroll}
         onBookingsClick={handleNavigateToBookings}
         onAgentClick={handleNavigateToAgent}

@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import PackageDetails from '../src/components/PackageDetails.jsx';
+import Navbar from '../src/components/Navbar.jsx';
+import Footer from '../src/components/Footer.jsx';
 import App from '../src/App.jsx';
 import { SAMPLE_PACKAGES } from '../src/data/packages.js';
 import { getPackageById, normalizePackage } from '../src/services/packageService.js';
@@ -424,6 +426,128 @@ describe('TAMS-32: Package Details and Retrieval Comprehensive Validation', () =
     expect(retried).toBe(false);
   });
 
+});
+
+describe('Home Navigation when exploring a particular package', () => {
+  const sampleGoa = SAMPLE_PACKAGES.find(p => p.id === 'pkg-1');
+
+  function renderVDOM(Component, props) {
+    let captured = null;
+    function Wrapper() {
+      captured = Component(props);
+      return captured;
+    }
+    renderToStaticMarkup(React.createElement(Wrapper));
+    return captured;
+  }
+
+  it('1. Navbar Home link triggers onHomeClick when activeView is package', () => {
+    let homeClicked = false;
+    let defaultPrevented = false;
+
+    const vdom = renderVDOM(Navbar, {
+      activeView: 'package',
+      onHomeClick: () => { homeClicked = true; },
+      onExploreClick: () => {},
+    });
+
+    const navbarContainer = vdom.props.children[0];
+    const desktopNav = navbarContainer.props.children[1];
+    const ul = desktopNav.props.children;
+    const homeLi = ul.props.children[0];
+    const homeLink = homeLi.props.children;
+
+    expect(homeLink.props.children).toBe('Home');
+    expect(homeLink.props.href).toBe('#hero-section');
+
+    homeLink.props.onClick({
+      preventDefault: () => { defaultPrevented = true; },
+    });
+
+    expect(defaultPrevented).toBe(true);
+    expect(homeClicked).toBe(true);
+  });
+
+  it('2. Navbar Brand Logo triggers onHomeClick when exploring a package', () => {
+    let homeClicked = false;
+
+    const vdom = renderVDOM(Navbar, {
+      activeView: 'package',
+      onHomeClick: () => { homeClicked = true; },
+      onExploreClick: () => {},
+    });
+
+    const navbarContainer = vdom.props.children[0];
+    const brandLogo = navbarContainer.props.children[0];
+
+    expect(brandLogo.props.href).toBe('#hero-section');
+    brandLogo.props.onClick({ preventDefault: () => {} });
+
+    expect(homeClicked).toBe(true);
+  });
+
+  it('3. Navbar Home link falls back to onExploreClick if onHomeClick is omitted', () => {
+    let exploreClicked = false;
+
+    const vdom = renderVDOM(Navbar, {
+      activeView: 'package',
+      onExploreClick: () => { exploreClicked = true; },
+    });
+
+    const navbarContainer = vdom.props.children[0];
+    const desktopNav = navbarContainer.props.children[1];
+    const ul = desktopNav.props.children;
+    const homeLi = ul.props.children[0];
+    const homeLink = homeLi.props.children;
+
+    homeLink.props.onClick({ preventDefault: () => {} });
+
+    expect(exploreClicked).toBe(true);
+  });
+
+  it('4. PackageDetails Home breadcrumb button triggers onHome callback', () => {
+    let homeCalled = false;
+    let backCalled = false;
+
+    const vdom = renderVDOM(PackageDetails, {
+      pkg: sampleGoa,
+      onHome: () => { homeCalled = true; },
+      onBack: () => { backCalled = true; },
+    });
+
+    const sectionContainer = vdom.props.children;
+    const navBreadcrumbs = sectionContainer.props.children[0];
+    const ol = navBreadcrumbs.props.children[1];
+    const firstLi = ol.props.children[0];
+    const homeBtn = firstLi.props.children;
+
+    expect(homeBtn.props.children).toBe('Home');
+    homeBtn.props.onClick();
+
+    expect(homeCalled).toBe(true);
+    expect(backCalled).toBe(false);
+  });
+
+  it('5. Footer Home link triggers onHomeClick callback', () => {
+    let homeCalled = false;
+
+    const vdom = renderVDOM(Footer, {
+      onHomeClick: () => { homeCalled = true; },
+      onExploreClick: () => {},
+    });
+
+    const container = vdom.props.children;
+    const footerTop = container.props.children[0];
+    const linksCol = footerTop.props.children[1];
+    const ul = linksCol.props.children[1];
+    const homeLi = ul.props.children[0];
+    const homeLink = homeLi.props.children;
+
+    expect(homeLink.props.children).toBe('Home');
+    homeLink.props.onClick({ preventDefault: () => {} });
+
+    expect(homeCalled).toBe(true);
+  });
 });
 
 
