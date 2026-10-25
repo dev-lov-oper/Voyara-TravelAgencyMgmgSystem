@@ -58,7 +58,7 @@ export default function BookingStatus({
   });
   const [authError, setAuthError] = useState(null);
   const [authEmail, setAuthEmail] = useState('');
-  const [authReference, setAuthReference] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [currentCustomer, setCurrentCustomer] = useState(() => propCustomer || getStoredCustomerInfo());
 
@@ -132,9 +132,9 @@ export default function BookingStatus({
       return;
     }
 
-    const cleanRef = authReference.trim();
-    if (!cleanRef) {
-      setAuthError('Please enter your booking reference code (e.g. BK-20261020-XXXX) to verify authorization.');
+    const cleanPassword = authPassword.trim();
+    if (!cleanPassword) {
+      setAuthError('Please enter your account password (default: voyara123).');
       return;
     }
 
@@ -144,14 +144,14 @@ export default function BookingStatus({
     try {
       const response = await loginCustomer({
         email: cleanEmail,
-        bookingReference: cleanRef,
+        password: cleanPassword,
       });
 
       setCurrentCustomer(response.customer);
       setIsUnauthenticated(false);
       setFetchKey((k) => k + 1);
     } catch (err) {
-      setAuthError(err.message || 'Customer authorization failed. Please verify your email and booking reference.');
+      setAuthError(err.message || 'Customer authentication failed. Please verify your email and password.');
     } finally {
       setIsAuthenticating(false);
     }
@@ -163,18 +163,18 @@ export default function BookingStatus({
     setInternalBookings([]);
     setIsUnauthenticated(true);
     setAuthEmail('');
-    setAuthReference('');
+    setAuthPassword('');
     setAuthError(null);
   };
 
-  const handleQuickDemoCustomer = async (demoEmail, demoReference) => {
+  const handleQuickDemoCustomer = async (demoEmail, demoPassword = 'voyara123') => {
     setAuthEmail(demoEmail);
-    setAuthReference(demoReference);
+    setAuthPassword(demoPassword);
     setIsAuthenticating(true);
     setAuthError(null);
 
     try {
-      const response = await loginCustomer({ email: demoEmail, bookingReference: demoReference });
+      const response = await loginCustomer({ email: demoEmail, password: demoPassword });
       setCurrentCustomer(response.customer);
       setIsUnauthenticated(false);
       setFetchKey((k) => k + 1);
@@ -334,7 +334,7 @@ export default function BookingStatus({
               </div>
               <h2 className="customer-auth-title" id="auth-prompt-heading">Customer Authentication Required</h2>
               <p className="customer-auth-subtitle">
-                Enter your registered booking email address and booking reference code to securely verify your identity and view your travel reservations.
+                Enter your registered booking email address and password to sign in and view your personal travel reservations.
               </p>
 
               {authError && (
@@ -371,20 +371,21 @@ export default function BookingStatus({
                 </div>
 
                 <div className="auth-form-group">
-                  <label htmlFor="customer-auth-reference" className="auth-field-label">
-                    Booking Reference <span className="field-required">*</span>
+                  <label htmlFor="customer-auth-password" className="auth-field-label">
+                    Password <span className="field-required">*</span>
                   </label>
                   <input
-                    id="customer-auth-reference"
-                    type="text"
+                    id="customer-auth-password"
+                    type="password"
                     className="auth-input"
-                    placeholder="e.g. BK-20261020-XXXX"
-                    value={authReference}
+                    placeholder="Enter your password (e.g. voyara123)"
+                    value={authPassword}
                     onChange={(e) => {
-                      setAuthReference(e.target.value);
+                      setAuthPassword(e.target.value);
                       if (authError) setAuthError(null);
                     }}
                     required
+                    autoComplete="current-password"
                   />
                 </div>
 
@@ -394,7 +395,7 @@ export default function BookingStatus({
                   id="btn-customer-login-submit"
                   disabled={isAuthenticating}
                 >
-                  {isAuthenticating ? 'Verifying Credentials...' : 'Retrieve My Bookings'}
+                  {isAuthenticating ? 'Verifying Credentials...' : 'Sign In to View Bookings'}
                 </button>
               </form>
 
@@ -404,18 +405,18 @@ export default function BookingStatus({
                   <button
                     type="button"
                     className="btn-demo-customer-pill"
-                    onClick={() => handleQuickDemoCustomer('ksharvan2007@gmail.com', 'BK-20261020-655R')}
+                    onClick={() => handleQuickDemoCustomer('ksharvan2007@gmail.com', 'voyara123')}
                     id="btn-demo-customer-1"
                   >
-                    Sharvan Kotharu (BK-20261020-655R)
+                    Sharvan Kotharu (voyara123)
                   </button>
                   <button
                     type="button"
                     className="btn-demo-customer-pill"
-                    onClick={() => handleQuickDemoCustomer('livetest@voyara.com', 'BK-20261020-Z3T3')}
+                    onClick={() => handleQuickDemoCustomer('livetest@voyara.com', 'voyara123')}
                     id="btn-demo-customer-2"
                   >
-                    Live Test User (BK-20261020-Z3T3)
+                    Live Test User (voyara123)
                   </button>
                 </div>
               </div>

@@ -87,6 +87,48 @@ export function seedPackagesIfEmpty(db, packagesList = SAMPLE_PACKAGES) {
 }
 
 /**
+ * Seeds default demo users with simple password 'voyara123' if not present.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ */
+export function seedDefaultUsersIfEmpty(db) {
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL DEFAULT 'voyara123',
+        full_name TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    `);
+
+    const insertUser = db.prepare(`
+      INSERT OR IGNORE INTO users (email, password, full_name)
+      VALUES (?, ?, ?)
+    `);
+
+    insertUser.run('ksharvan2007@gmail.com', 'voyara123', 'Sharvan kotharu');
+    insertUser.run('livetest@voyara.com', 'voyara123', 'Live Test User');
+
+    // Auto-sync any existing customer bookings into users with default password
+    try {
+      const existingBookings = db.prepare('SELECT DISTINCT email, full_name FROM bookings WHERE email IS NOT NULL').all();
+      for (const b of existingBookings) {
+        if (b.email) {
+          insertUser.run(b.email.trim().toLowerCase(), 'voyara123', b.full_name || 'Traveler');
+        }
+      }
+    } catch {
+      // Ignore if bookings table not ready yet
+    }
+  } catch {
+    // Ignore error
+  }
+}
+
+/**
  * Applies all pending migrations in order.
  *
  * @param {import('node:sqlite').DatabaseSync} db
@@ -124,6 +166,9 @@ export function runMigrations(db, options = {}) {
 
   // Ensure initial active packages are available in database
   seedPackagesIfEmpty(db);
+
+  // Ensure demo users with simple password are seeded
+  seedDefaultUsersIfEmpty(db);
 
   return newlyApplied;
 }

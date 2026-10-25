@@ -12,6 +12,7 @@ import {
 import { getPackageById } from '../models/packageModel.js';
 import { createBooking, getBookingByReference, getBookingsByCustomer } from '../models/bookingModel.js';
 import { createCustomerToken } from '../auth.js';
+import { createUser, getUserByEmail } from '../models/userModel.js';
 
 
 /**
@@ -147,6 +148,17 @@ export function handleCreateBooking(db, body) {
       fullName: booking.fullName,
     });
 
+    // Associate simple password with user account (defaults to voyara123 if not provided)
+    try {
+      createUser(db, {
+        email: booking.email,
+        password: (body.password || 'voyara123').trim(),
+        fullName: booking.fullName,
+      });
+    } catch {
+      // Ignore user creation error if table not ready
+    }
+
     return {
       status: 201,
       body: {
@@ -231,6 +243,15 @@ export function handleGetBookingByReference(db, reference, authenticatedCustomer
  * @param {Object} credentials
  * @returns {{ status: number, body: Object }}
  */
+/**
+ * Handles customer authentication / login via registered email and simple password.
+ * Authenticates user credentials using simple password association.
+ * Returns a signed token scoped to the customer.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {Object} credentials
+ * @returns {{ status: number, body: Object }}
+ */
 export function handleCustomerLogin(db, credentials) {
   if (!credentials || typeof credentials !== 'object') {
     return {
@@ -247,50 +268,59 @@ export function handleCustomerLogin(db, credentials) {
     };
   }
 
-  const reference = (credentials.bookingReference || '').trim();
-  if (!reference) {
+  const password = typeof credentials.password === 'string' ? credentials.password.trim() : '';
+  if (!password) {
     return {
       status: 400,
       body: {
         success: false,
-        message: 'A valid booking reference is required along with your email address to verify authorization.',
+        message: 'Password is required to sign in.',
         errors: {
-          bookingReference: 'Booking reference is required to verify booking ownership.',
+          password: 'Password is required.',
         },
       },
     };
   }
 
-  // Find customer's bookings in the database
+  // Find user account
+  let user = getUserByEmail(db, email);
   const customerBookings = getBookingsByCustomer(db, email);
-  if (customerBookings.length === 0) {
+
+  // If user account not found in users table but bookings exist, auto-create user with default password
+  if (!user && customerBookings.length > 0) {
+    user = createUser(db, {
+      email,
+      password: 'voyara123',
+      fullName: customerBookings[0].fullName,
+    });
+  }
+
+  if (!user && customerBookings.length === 0) {
     return {
       status: 404,
       body: {
         success: false,
-        message: `No booking records found for email address '${email}'.`,
+        message: `No account or booking records found for email address '${email}'.`,
       },
     };
   }
 
-  // Verify the booking reference belongs to this customer
-  const matchingRef = customerBookings.find(
-    (b) => b.bookingReference.toLowerCase() === reference.toLowerCase()
-  );
-  if (!matchingRef) {
+  // Verify password (simple password match)
+  const isMatch = user && user.password === password;
+  if (!isMatch) {
     return {
-      status: 403,
+      status: 401,
       body: {
         success: false,
-        message: `Authorization failed: Booking reference '${reference}' does not match the provided email address.`,
+        message: 'Invalid password. Please enter the correct password associated with your account.',
       },
     };
   }
 
-  const primaryBooking = matchingRef;
+  const fullName = user.full_name || (customerBookings[0] ? customerBookings[0].fullName : '');
   const token = createCustomerToken({
     email,
-    fullName: primaryBooking.fullName,
+    fullName,
   });
 
   return {
@@ -301,7 +331,7 @@ export function handleCustomerLogin(db, credentials) {
       token,
       customer: {
         email,
-        fullName: primaryBooking.fullName,
+        fullName,
       },
       bookingsCount: customerBookings.length,
     },

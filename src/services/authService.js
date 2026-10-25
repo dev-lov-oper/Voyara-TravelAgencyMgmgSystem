@@ -112,7 +112,7 @@ export function clearStoredCustomerSession() {
  *
  * @param {Object} credentials
  * @param {string} credentials.email
- * @param {string} [credentials.bookingReference]
+ * @param {string} credentials.password
  * @param {Object} [options]
  * @param {AbortSignal} [options.signal]
  * @returns {Promise<{ success: boolean, token: string, customer: Object }>}
