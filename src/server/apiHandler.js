@@ -12,6 +12,7 @@ import {
   handleGetCustomerBookings,
   handleAgentLogin,
   handleGetAgentBookings,
+  handleUpdateBookingStatus,
 } from './controllers/bookingController.js';
 import { authenticateCustomerRequest, authenticateAgentRequest } from './auth.js';
 
@@ -36,13 +37,31 @@ export function ensureServerInitialized(db = null) {
  * @returns {Promise<Object>}
  */
 export async function parseJsonBody(req) {
+  if (req.body !== undefined && req.body !== null) {
+    if (typeof req.body === 'object') {
+      return req.body;
+    }
+    if (typeof req.body === 'string') {
+      if (!req.body.trim()) return {};
+      try {
+        return JSON.parse(req.body);
+      } catch (err) {
+        throw new Error(`Invalid JSON payload: ${err.message}`);
+      }
+    }
+  }
+
   return new Promise((resolve, reject) => {
     let body = '';
+    if (typeof req.on !== 'function') {
+      resolve({});
+      return;
+    }
     req.on('data', (chunk) => {
       body += chunk;
       // Prevent payload floods (> 1MB)
       if (body.length > 1e6) {
-        req.destroy();
+        if (typeof req.destroy === 'function') req.destroy();
         reject(new Error('Request payload too large'));
       }
     });
@@ -81,7 +100,7 @@ export async function handleApiRequest(req, res, db = null) {
     res.writeHead(status, {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Auth-Token, X-Customer-Token',
     });
     res.end(JSON.stringify(payload));
@@ -91,7 +110,7 @@ export async function handleApiRequest(req, res, db = null) {
   if (method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Auth-Token, X-Customer-Token',
     });
     res.end();
@@ -144,6 +163,67 @@ export async function handleApiRequest(req, res, db = null) {
         return;
       }
       const result = handleGetAgentBookings(targetDb, authResult.agent);
+      sendJson(result.status, result.body);
+      return;
+    }
+
+    // 0d. PATCH or POST /api/agent/bookings/:reference/status (Update booking status: Confirmed or Rejected)
+    const agentStatusMatch = pathname.match(/^\/api\/agent\/bookings\/([a-zA-Z0-9_-]+)\/status\/?$/);
+    if ((method === 'PATCH' || method === 'POST' || method === 'PUT') && agentStatusMatch) {
+      const reference = agentStatusMatch[1];
+      const authResult = authenticateAgentRequest(req);
+      if (!authResult.authenticated) {
+        sendJson(authResult.status || 401, {
+          success: false,
+          message: authResult.error || 'Agent authentication required.',
+        });
+        return;
+      }
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (parseErr) {
+        sendJson(400, {
+          success: false,
+          message: parseErr.message || 'Malformed JSON in request body.',
+        });
+        return;
+      }
+      const result = handleUpdateBookingStatus(targetDb, reference, body?.status, authResult.agent);
+      sendJson(result.status, result.body);
+      return;
+    }
+
+    // 0e. POST /api/agent/bookings/:reference/confirm (Confirm pending booking)
+    const agentConfirmMatch = pathname.match(/^\/api\/agent\/bookings\/([a-zA-Z0-9_-]+)\/confirm\/?$/);
+    if (method === 'POST' && agentConfirmMatch) {
+      const reference = agentConfirmMatch[1];
+      const authResult = authenticateAgentRequest(req);
+      if (!authResult.authenticated) {
+        sendJson(authResult.status || 401, {
+          success: false,
+          message: authResult.error || 'Agent authentication required.',
+        });
+        return;
+      }
+      const result = handleUpdateBookingStatus(targetDb, reference, 'Confirmed', authResult.agent);
+      sendJson(result.status, result.body);
+      return;
+    }
+
+    // 0f. POST /api/agent/bookings/:reference/reject (Reject pending booking)
+    const agentRejectMatch = pathname.match(/^\/api\/agent\/bookings\/([a-zA-Z0-9_-]+)\/reject\/?$/);
+    if (method === 'POST' && agentRejectMatch) {
+      const reference = agentRejectMatch[1];
+      const authResult = authenticateAgentRequest(req);
+      if (!authResult.authenticated) {
+        sendJson(authResult.status || 401, {
+          success: false,
+          message: authResult.error || 'Agent authentication required.',
+        });
+        return;
+      }
+      const result = handleUpdateBookingStatus(targetDb, reference, 'Rejected', authResult.agent);
       sendJson(result.status, result.body);
       return;
     }

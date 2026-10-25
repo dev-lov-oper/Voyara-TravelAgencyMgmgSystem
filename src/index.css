@@ -4512,4 +4512,231 @@ button {
   }
 }
 
+/* --------------------------------------------------------------------------
+   15. Agent Booking Confirmation & Rejection Actions (TAMS-40)
+   -------------------------------------------------------------------------- */
+
+/* Action Banners */
+.agent-action-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  animation: fadeInDown 200ms ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.agent-action-banner-success {
+  background-color: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.agent-action-banner-error {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.agent-action-banner-success .banner-icon {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+.agent-action-banner-error .banner-icon {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.banner-text {
+  line-height: 1.4;
+}
+
+.btn-banner-close {
+  background: none;
+  border: none;
+  color: currentColor;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.btn-banner-close:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Action Buttons in Table View */
+.cell-actions-header {
+  min-width: 170px;
+  text-align: center;
+}
+
+.cell-actions {
+  white-space: nowrap;
+}
+
+.agent-action-buttons-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.btn-action-confirm,
+.btn-action-reject {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  line-height: 1;
+}
+
+.btn-action-confirm {
+  background-color: #ecfdf5;
+  border: 1px solid #10b981;
+  color: #065f46;
+}
+
+.btn-action-confirm:hover:not(:disabled) {
+  background-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-action-reject {
+  background-color: #fef2f2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+.btn-action-reject:hover:not(:disabled) {
+  background-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-action-confirm:disabled,
+.btn-action-reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Spinner inside action button */
+.btn-spinner-xs {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 600ms linear infinite;
+}
+
+/* Completed Tag */
+.action-completed-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.completed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.confirmed-badge {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.rejected-badge {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* Card View Actions */
+.card-actions-row {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.card-action-buttons-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.card-action-buttons-wrap .btn-action-confirm,
+.card-action-buttons-wrap .btn-action-reject {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.card-completed-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0;
+}
+
+.completed-badge-card {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.completed-badge-card strong {
+  color: var(--color-text-primary);
+}
+
+
 

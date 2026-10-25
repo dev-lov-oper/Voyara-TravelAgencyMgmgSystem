@@ -10,7 +10,7 @@ import {
   isValidTravelDate,
 } from '../../utils/bookingValidation.js';
 import { getPackageById } from '../models/packageModel.js';
-import { createBooking, getBookingByReference, getBookingsByCustomer, getAllBookings } from '../models/bookingModel.js';
+import { createBooking, getBookingByReference, getBookingsByCustomer, getAllBookings, updateBookingStatus } from '../models/bookingModel.js';
 import { createCustomerToken, createAgentToken } from '../auth.js';
 import { createUser, getUserByEmail } from '../models/userModel.js';
 
@@ -505,6 +505,149 @@ export function handleGetAgentBookings(db, authenticatedAgent) {
       },
       bookings,
       total: bookings.length,
+    },
+  };
+}
+
+/**
+ * Allowed status transitions according to business rules (TAMS-40).
+ * Pending -> Confirmed | Rejected
+ * Confirmed -> (Terminal state, cannot transition again)
+ * Rejected -> (Terminal state, cannot transition again)
+ */
+export const ALLOWED_STATUS_TRANSITIONS = {
+  Pending: ['Confirmed', 'Rejected'],
+  Confirmed: [],
+  Rejected: [],
+};
+
+/**
+ * Handles agent confirmation or rejection of a customer booking.
+ * Validates agent authorization, existence of booking, and valid status transition rules.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} reference - Booking reference
+ * @param {string} targetStatus - Target status ('Confirmed' or 'Rejected')
+ * @param {Object} authenticatedAgent - Authenticated agent from token
+ * @returns {{ status: number, body: Object }}
+ */
+export function handleUpdateBookingStatus(db, reference, targetStatus, authenticatedAgent) {
+  // 1. Enforce agent authorization
+  if (!authenticatedAgent || authenticatedAgent.role !== 'agent') {
+    return {
+      status: 403,
+      body: {
+        success: false,
+        message: 'Agent authorization required. Only authorized travel agents can confirm or reject bookings.',
+      },
+    };
+  }
+
+  // 2. Validate reference parameter
+  if (!reference || typeof reference !== 'string' || !reference.trim()) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        message: 'A valid booking reference is required.',
+      },
+    };
+  }
+  const cleanRef = reference.trim();
+
+  // 3. Validate target status
+  if (!targetStatus || typeof targetStatus !== 'string' || !targetStatus.trim()) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        message: "Target booking status is required. Permitted values are 'Confirmed' or 'Rejected'.",
+      },
+    };
+  }
+
+  // Normalize target status casing (e.g. 'confirmed' -> 'Confirmed', 'REJECTED' -> 'Rejected')
+  const rawStatus = targetStatus.trim();
+  const normalizedTarget = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+
+  if (normalizedTarget !== 'Confirmed' && normalizedTarget !== 'Rejected') {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        message: `Invalid target status '${rawStatus}'. Permitted values are 'Confirmed' or 'Rejected'.`,
+      },
+    };
+  }
+
+  // 4. Check if booking exists
+  const existingBooking = getBookingByReference(db, cleanRef);
+  if (!existingBooking) {
+    return {
+      status: 404,
+      body: {
+        success: false,
+        message: `Booking with reference '${cleanRef}' was not found.`,
+      },
+    };
+  }
+
+  // 5. Enforce business rules and status transition validation
+  const currentStatus = existingBooking.status || 'Pending';
+  const currentNormalized = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1).toLowerCase();
+
+  if (currentNormalized === 'Confirmed') {
+    return {
+      status: 409,
+      body: {
+        success: false,
+        message: `Booking '${cleanRef}' is already Confirmed. Processed bookings cannot be modified again.`,
+        currentStatus: existingBooking.status,
+      },
+    };
+  }
+
+  if (currentNormalized === 'Rejected') {
+    return {
+      status: 409,
+      body: {
+        success: false,
+        message: `Booking '${cleanRef}' is already Rejected. Processed bookings cannot be modified again.`,
+        currentStatus: existingBooking.status,
+      },
+    };
+  }
+
+  const allowedTargets = ALLOWED_STATUS_TRANSITIONS[currentNormalized] || [];
+  if (!allowedTargets.includes(normalizedTarget)) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        message: `Cannot transition booking from '${currentStatus}' to '${normalizedTarget}'.`,
+        currentStatus: existingBooking.status,
+      },
+    };
+  }
+
+  // 6. Persist status update in database
+  const updatedBooking = updateBookingStatus(db, cleanRef, normalizedTarget);
+  if (!updatedBooking) {
+    return {
+      status: 500,
+      body: {
+        success: false,
+        message: `Failed to update status for booking '${cleanRef}'.`,
+      },
+    };
+  }
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      message: `Booking '${cleanRef}' has been successfully ${normalizedTarget.toLowerCase()}.`,
+      booking: updatedBooking,
     },
   };
 }

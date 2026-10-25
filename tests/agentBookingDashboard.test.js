@@ -535,10 +535,10 @@ describe('TAMS-39: Agent Booking Dashboard Interface & Verification', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // 7. Scope Restrictions Compliance
+  // 7. Booking Review Actions (TAMS-40)
   // ---------------------------------------------------------------------------
-  describe('7. Scope Restrictions Compliance', () => {
-    it('does not contain confirmation or rejection action buttons (reserved for TAMS-40)', () => {
+  describe('7. Booking Review Actions (Confirm and Reject)', () => {
+    it('renders Confirm and Reject action buttons for Pending bookings and processed indicators for completed bookings', () => {
       const html = renderToStaticMarkup(
         React.createElement(AgentBookingDashboard, {
           bookings: sampleBookings,
@@ -547,11 +547,11 @@ describe('TAMS-39: Agent Booking Dashboard Interface & Verification', () => {
         })
       );
 
-      // Verify no action buttons to transition booking status (reserved for TAMS-40)
-      expect(html).not.toContain('btn-confirm-booking');
-      expect(html).not.toContain('btn-reject-booking');
-      expect(html).not.toContain('Confirm Booking');
-      expect(html).not.toContain('Reject Booking');
+      expect(html).toContain('data-testid="btn-confirm-booking"');
+      expect(html).toContain('data-testid="btn-reject-booking"');
+      expect(html).toContain('Confirm');
+      expect(html).toContain('Reject');
+      expect(html).toContain('data-testid="booking-processed-indicator"');
     });
   });
 });

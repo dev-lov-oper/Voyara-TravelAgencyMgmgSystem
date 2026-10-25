@@ -149,3 +149,79 @@ export async function getAgentBookings(options = {}) {
 
   return Array.isArray(data.bookings) ? data.bookings : [];
 }
+
+/**
+ * Updates a booking status to Confirmed or Rejected (TAMS-40).
+ *
+ * @param {Object} options
+ * @param {string} options.bookingReference - The booking reference code
+ * @param {'Confirmed'|'Rejected'} options.status - The new status
+ * @param {string} [options.token] - Optional agent auth token override
+ * @param {AbortSignal} [options.signal] - Optional abort signal
+ * @returns {Promise<Object>}
+ */
+export async function updateBookingStatus({ bookingReference, status, token, signal } = {}) {
+  const authToken = token || getStoredAgentToken();
+
+  if (!authToken) {
+    const error = new Error('Agent authentication token is missing or expired. Please sign in as an agent.');
+    error.status = 401;
+    throw error;
+  }
+
+  if (!bookingReference) {
+    const error = new Error('Booking reference is required to update status.');
+    error.status = 400;
+    throw error;
+  }
+
+  const response = await fetch(`/api/agent/bookings/${encodeURIComponent(bookingReference)}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${authToken}`,
+      'x-auth-token': authToken,
+    },
+    body: JSON.stringify({ status }),
+    signal,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || !data.success) {
+    const error = new Error(data.message || `Failed to update booking status to ${status}.`);
+    error.status = response.status;
+    error.booking = data.booking || null;
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Confirms a pending customer booking (TAMS-40).
+ *
+ * @param {Object} options
+ * @param {string} options.bookingReference
+ * @param {string} [options.token]
+ * @param {AbortSignal} [options.signal]
+ * @returns {Promise<Object>}
+ */
+export async function confirmBooking({ bookingReference, token, signal } = {}) {
+  return updateBookingStatus({ bookingReference, status: 'Confirmed', token, signal });
+}
+
+/**
+ * Rejects a pending customer booking (TAMS-40).
+ *
+ * @param {Object} options
+ * @param {string} options.bookingReference
+ * @param {string} [options.token]
+ * @param {AbortSignal} [options.signal]
+ * @returns {Promise<Object>}
+ */
+export async function rejectBooking({ bookingReference, token, signal } = {}) {
+  return updateBookingStatus({ bookingReference, status: 'Rejected', token, signal });
+}
+

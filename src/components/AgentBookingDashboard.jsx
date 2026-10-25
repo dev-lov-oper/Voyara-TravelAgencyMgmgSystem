@@ -5,6 +5,7 @@ import {
   getStoredAgentInfo,
   clearStoredAgentSession,
   loginAgent,
+  updateBookingStatus,
 } from '../services/agentService.js';
 import { formatBookingDate, getStatusClass } from '../utils/bookingStatusUtils.js';
 import EmptyState from './EmptyState.jsx';
@@ -36,6 +37,9 @@ export default function AgentBookingDashboard({
   agentInfo: propAgentInfo,
   onRetry: propOnRetry,
   onExplorePackages,
+  onConfirmBooking: propOnConfirmBooking,
+  onRejectBooking: propOnRejectBooking,
+  onBookingUpdated: propOnBookingUpdated,
   initialStatusFilter = 'All',
   initialSearchQuery = '',
   initialViewMode = 'table',
@@ -67,6 +71,11 @@ export default function AgentBookingDashboard({
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [copiedRef, setCopiedRef] = useState(null);
+
+  // Booking Action & Transition State (TAMS-40)
+  const [processingRef, setProcessingRef] = useState(null);
+  const [actionSuccess, setActionSuccess] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   // Effective state
   const bookingsList = isControlled ? propBookings : internalBookings;
@@ -166,6 +175,53 @@ export default function AgentBookingDashboard({
       setInternalLoading(true);
       setInternalError(null);
       setFetchKey((k) => k + 1);
+    }
+  };
+
+  // Handle status transition (Confirm or Reject) (TAMS-40)
+  const handleStatusTransition = async (bookingReference, targetStatus) => {
+    if (!bookingReference || processingRef) return;
+
+    setActionError(null);
+    setActionSuccess(null);
+    setProcessingRef(bookingReference);
+
+    try {
+      if (targetStatus === 'Confirmed' && propOnConfirmBooking) {
+        await propOnConfirmBooking(bookingReference);
+      } else if (targetStatus === 'Rejected' && propOnRejectBooking) {
+        await propOnRejectBooking(bookingReference);
+      } else {
+        const token = propAgentToken || getStoredAgentToken();
+        await updateBookingStatus({
+          bookingReference,
+          status: targetStatus,
+          token,
+        });
+      }
+
+      // Update state immediately so UI reflects latest status
+      setInternalBookings((prev) =>
+        prev.map((b) =>
+          b.bookingReference === bookingReference
+            ? { ...b, status: targetStatus }
+            : b
+        )
+      );
+
+      if (propOnBookingUpdated) {
+        propOnBookingUpdated({ bookingReference, status: targetStatus });
+      }
+
+      setActionSuccess({
+        bookingReference,
+        status: targetStatus,
+        message: `Booking ${bookingReference} has been successfully ${targetStatus.toLowerCase()}.`,
+      });
+    } catch (err) {
+      setActionError(err.message || `Failed to update booking status to ${targetStatus}.`);
+    } finally {
+      setProcessingRef(null);
     }
   };
 
@@ -691,6 +747,49 @@ export default function AgentBookingDashboard({
               )}
             </div>
 
+            {/* Action Feedback Banners (TAMS-40) */}
+            {actionSuccess && (
+              <div
+                className="agent-action-banner agent-action-banner-success"
+                role="alert"
+                data-testid="agent-action-success"
+              >
+                <div className="banner-content">
+                  <span className="banner-icon" aria-hidden="true">✓</span>
+                  <span className="banner-text">{actionSuccess.message}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-banner-close"
+                  onClick={() => setActionSuccess(null)}
+                  aria-label="Dismiss message"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {actionError && (
+              <div
+                className="agent-action-banner agent-action-banner-error"
+                role="alert"
+                data-testid="agent-action-error"
+              >
+                <div className="banner-content">
+                  <span className="banner-icon" aria-hidden="true">⚠</span>
+                  <span className="banner-text">{actionError}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-banner-close"
+                  onClick={() => setActionError(null)}
+                  aria-label="Dismiss error message"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Layout A: Table View */}
             {viewMode === 'table' ? (
               <div
@@ -710,6 +809,7 @@ export default function AgentBookingDashboard({
                       <th scope="col">Travelers</th>
                       <th scope="col">Total Price</th>
                       <th scope="col">Current Status</th>
+                      <th scope="col" className="cell-actions-header">Review Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -850,6 +950,60 @@ export default function AgentBookingDashboard({
                               <span className="status-text">{booking.status || 'Pending'}</span>
                             </span>
                           </td>
+
+                          {/* 10. Review Actions: Confirm and Reject (TAMS-40) */}
+                          <td className="cell-actions" data-testid="booking-actions-cell">
+                            {(booking.status || '').toLowerCase() === 'pending' ? (
+                              <div className="agent-action-buttons-wrap">
+                                <button
+                                  type="button"
+                                  className="btn-action-confirm"
+                                  data-testid="btn-confirm-booking"
+                                  disabled={Boolean(processingRef)}
+                                  onClick={() => handleStatusTransition(booking.bookingReference, 'Confirmed')}
+                                  aria-label={`Confirm booking ${booking.bookingReference}`}
+                                  title="Confirm booking request"
+                                >
+                                  {processingRef === booking.bookingReference ? (
+                                    <span className="btn-spinner-xs" aria-hidden="true"></span>
+                                  ) : (
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  )}
+                                  <span>Confirm</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-action-reject"
+                                  data-testid="btn-reject-booking"
+                                  disabled={Boolean(processingRef)}
+                                  onClick={() => handleStatusTransition(booking.bookingReference, 'Rejected')}
+                                  aria-label={`Reject booking ${booking.bookingReference}`}
+                                  title="Reject booking request"
+                                >
+                                  {processingRef === booking.bookingReference ? (
+                                    <span className="btn-spinner-xs" aria-hidden="true"></span>
+                                  ) : (
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                                      <line x1="18" y1="6" x2="6" y2="18" />
+                                      <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                  )}
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="action-completed-indicator" data-testid="booking-processed-indicator">
+                                {(booking.status || '').toLowerCase() === 'confirmed' && (
+                                  <span className="completed-badge confirmed-badge">✓ Processed</span>
+                                )}
+                                {(booking.status || '').toLowerCase() === 'rejected' && (
+                                  <span className="completed-badge rejected-badge">✕ Processed</span>
+                                )}
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -976,6 +1130,53 @@ export default function AgentBookingDashboard({
                           <span className="note-text">{booking.additionalRequests}</span>
                         </div>
                       )}
+
+                      {/* Card Review Actions (TAMS-40) */}
+                      <div className="card-actions-row" data-testid="booking-actions-card">
+                        {(booking.status || '').toLowerCase() === 'pending' ? (
+                          <div className="card-buttons-wrap">
+                            <button
+                              type="button"
+                              className="btn-action-confirm btn-block"
+                              data-testid="btn-confirm-booking"
+                              disabled={Boolean(processingRef)}
+                              onClick={() => handleStatusTransition(booking.bookingReference, 'Confirmed')}
+                            >
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              <span>
+                                {processingRef === booking.bookingReference
+                                  ? 'Confirming...'
+                                  : 'Confirm Booking'}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-action-reject btn-block"
+                              data-testid="btn-reject-booking"
+                              disabled={Boolean(processingRef)}
+                              onClick={() => handleStatusTransition(booking.bookingReference, 'Rejected')}
+                            >
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                              <span>
+                                {processingRef === booking.bookingReference
+                                  ? 'Rejecting...'
+                                  : 'Reject Booking'}
+                              </span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="card-completed-indicator" data-testid="booking-processed-indicator">
+                            <span className="completed-badge-card">
+                              Status: <strong>{booking.status}</strong> (Processed)
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </article>
                   );
                 })}

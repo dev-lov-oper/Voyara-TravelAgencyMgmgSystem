@@ -221,3 +221,32 @@ export function getBookingsByCustomer(db, email) {
   return rows.map(mapBookingRow);
 }
 
+/**
+ * Updates the booking status in the database and sets updated_at timestamp.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} reference - Unique booking reference code
+ * @param {string} newStatus - New status value ('Confirmed' | 'Rejected')
+ * @returns {Object|null} The updated booking object, or null if booking not found
+ */
+export function updateBookingStatus(db, reference, newStatus) {
+  if (!reference || typeof reference !== 'string' || !newStatus) return null;
+
+  const cleanRef = reference.trim();
+  const cleanStatus = newStatus.trim();
+
+  const updateStmt = db.prepare(`
+    UPDATE bookings
+    SET status = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE booking_reference = ?
+  `);
+
+  const result = updateStmt.run(cleanStatus, cleanRef);
+  if (result.changes === 0) {
+    return null;
+  }
+
+  return getBookingByReference(db, cleanRef);
+}
+
+

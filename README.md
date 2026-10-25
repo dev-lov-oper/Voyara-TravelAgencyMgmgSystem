@@ -318,9 +318,44 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-39:** Build Agent Booking Dashboard (Agent Booking Display, Metrics & Access Gate)
 - [x] **TAMS-12:** Booking Request Submission & Status Tracking
 - [x] **TAMS-13:** Booking Status Tracking
-- [ ] **TAMS-40:** Agent Booking Confirmation and Rejection (Action Handling)
+- [x] **TAMS-40:** Agent Booking Confirmation and Rejection (Action Handling)
 - [ ] **TAMS-41:** Validate Booking Status Transitions (Testing)
 - [ ] **TAMS-14:** Agent Booking Confirmation & Rejection
+
+---
+
+## Booking Confirmation & Rejection (Jira Story: TAMS-40)
+
+### 1. Review Actions for Authorized Agents
+- **Eligible Status Reviews:**
+  - Bookings with `Pending` status display prominent **"Confirm"** (emerald checkmark) and **"Reject"** (rose cross) action buttons in both Table and Card layouts.
+  - Processed bookings (`Confirmed` or `Rejected`) display a clean completed badge (`✓ Processed` / `✕ Processed`) preventing redundant action attempts.
+- **Duplicate Submission Safeguards:**
+  - Action buttons are dynamically disabled with inline loading spinners while a status update is in flight.
+  - Success and error feedback banners provide clear, accessible confirmation upon completion.
+
+### 2. Business Rules & Transition Safeguards
+- **Permitted Transitions:**
+  - `Pending` ➔ `Confirmed`
+  - `Pending` ➔ `Rejected`
+- **Terminal States & Conflict Handling:**
+  - `Confirmed` bookings cannot be confirmed again or rejected (returns HTTP `409 Conflict`).
+  - `Rejected` bookings cannot be rejected again or confirmed (returns HTTP `409 Conflict`).
+  - Invalid target statuses are rejected with HTTP `400 Bad Request`.
+  - Nonexistent booking references return HTTP `404 Not Found`.
+
+### 3. Agent Authorization & Endpoints
+- **Endpoints Implemented:**
+  - `PATCH /api/agent/bookings/:reference/status` — General status transition endpoint accepting `{ "status": "Confirmed" | "Rejected" }`.
+  - `POST /api/agent/bookings/:reference/confirm` — Direct confirmation action shortcut.
+  - `POST /api/agent/bookings/:reference/reject` — Direct rejection action shortcut.
+- **Authorization Enforcement:**
+  - Requests must include a valid Bearer token signed with agent credentials (`role === 'agent'`).
+  - Unauthenticated requests return `401 Unauthorized`. Customer tokens return `403 Forbidden`.
+
+### 4. Database Persistence & Customer Synchronization
+- Status changes are immediately persisted to the underlying SQLite database with updated timestamps.
+- When customers inspect their bookings via `GET /api/bookings` or the **My Bookings** page, the latest status is immediately reflected without delay.
 
 ---
 
