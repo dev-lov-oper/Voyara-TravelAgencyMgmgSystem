@@ -248,6 +248,18 @@ export function handleCustomerLogin(db, credentials) {
   }
 
   const reference = (credentials.bookingReference || '').trim();
+  if (!reference) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        message: 'A valid booking reference is required along with your email address to verify authorization.',
+        errors: {
+          bookingReference: 'Booking reference is required to verify booking ownership.',
+        },
+      },
+    };
+  }
 
   // Find customer's bookings in the database
   const customerBookings = getBookingsByCustomer(db, email);
@@ -261,23 +273,21 @@ export function handleCustomerLogin(db, credentials) {
     };
   }
 
-  // If a booking reference is provided, verify it belongs to this customer
-  if (reference) {
-    const matchingRef = customerBookings.find(
-      (b) => b.bookingReference.toLowerCase() === reference.toLowerCase()
-    );
-    if (!matchingRef) {
-      return {
-        status: 404,
-        body: {
-          success: false,
-          message: `Booking reference '${reference}' does not match the provided email address.`,
-        },
-      };
-    }
+  // Verify the booking reference belongs to this customer
+  const matchingRef = customerBookings.find(
+    (b) => b.bookingReference.toLowerCase() === reference.toLowerCase()
+  );
+  if (!matchingRef) {
+    return {
+      status: 403,
+      body: {
+        success: false,
+        message: `Authorization failed: Booking reference '${reference}' does not match the provided email address.`,
+      },
+    };
   }
 
-  const primaryBooking = customerBookings[0];
+  const primaryBooking = matchingRef;
   const token = createCustomerToken({
     email,
     fullName: primaryBooking.fullName,

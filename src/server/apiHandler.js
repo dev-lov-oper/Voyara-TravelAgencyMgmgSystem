@@ -157,8 +157,14 @@ export async function handleApiRequest(req, res, db = null) {
     if (method === 'GET' && bookingMatch) {
       const reference = bookingMatch[1];
       const authResult = authenticateCustomerRequest(req);
-      const customer = authResult.authenticated ? authResult.customer : null;
-      const result = handleGetBookingByReference(targetDb, reference, customer);
+      if (!authResult.authenticated) {
+        sendJson(401, {
+          success: false,
+          message: authResult.error || 'Authentication required to access booking details.',
+        });
+        return;
+      }
+      const result = handleGetBookingByReference(targetDb, reference, authResult.customer);
       sendJson(result.status, result.body);
       return;
     }

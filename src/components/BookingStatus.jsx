@@ -132,20 +132,26 @@ export default function BookingStatus({
       return;
     }
 
+    const cleanRef = authReference.trim();
+    if (!cleanRef) {
+      setAuthError('Please enter your booking reference code (e.g. BK-20261020-XXXX) to verify authorization.');
+      return;
+    }
+
     setIsAuthenticating(true);
     setAuthError(null);
 
     try {
       const response = await loginCustomer({
         email: cleanEmail,
-        bookingReference: authReference.trim() || undefined,
+        bookingReference: cleanRef,
       });
 
       setCurrentCustomer(response.customer);
       setIsUnauthenticated(false);
       setFetchKey((k) => k + 1);
     } catch (err) {
-      setAuthError(err.message || 'Customer authentication failed. Please verify your email.');
+      setAuthError(err.message || 'Customer authorization failed. Please verify your email and booking reference.');
     } finally {
       setIsAuthenticating(false);
     }
@@ -161,13 +167,14 @@ export default function BookingStatus({
     setAuthError(null);
   };
 
-  const handleQuickDemoCustomer = async (demoEmail) => {
+  const handleQuickDemoCustomer = async (demoEmail, demoReference) => {
     setAuthEmail(demoEmail);
+    setAuthReference(demoReference);
     setIsAuthenticating(true);
     setAuthError(null);
 
     try {
-      const response = await loginCustomer({ email: demoEmail });
+      const response = await loginCustomer({ email: demoEmail, bookingReference: demoReference });
       setCurrentCustomer(response.customer);
       setIsUnauthenticated(false);
       setFetchKey((k) => k + 1);
@@ -327,7 +334,7 @@ export default function BookingStatus({
               </div>
               <h2 className="customer-auth-title" id="auth-prompt-heading">Customer Authentication Required</h2>
               <p className="customer-auth-subtitle">
-                Enter your registered booking email address to retrieve your personal reservation records and track live confirmation statuses.
+                Enter your registered booking email address and booking reference code to securely verify your identity and view your travel reservations.
               </p>
 
               {authError && (
@@ -365,7 +372,7 @@ export default function BookingStatus({
 
                 <div className="auth-form-group">
                   <label htmlFor="customer-auth-reference" className="auth-field-label">
-                    Booking Reference <span className="field-optional">(Optional)</span>
+                    Booking Reference <span className="field-required">*</span>
                   </label>
                   <input
                     id="customer-auth-reference"
@@ -373,7 +380,11 @@ export default function BookingStatus({
                     className="auth-input"
                     placeholder="e.g. BK-20261020-XXXX"
                     value={authReference}
-                    onChange={(e) => setAuthReference(e.target.value)}
+                    onChange={(e) => {
+                      setAuthReference(e.target.value);
+                      if (authError) setAuthError(null);
+                    }}
+                    required
                   />
                 </div>
 
@@ -393,18 +404,18 @@ export default function BookingStatus({
                   <button
                     type="button"
                     className="btn-demo-customer-pill"
-                    onClick={() => handleQuickDemoCustomer('ksharvan2007@gmail.com')}
+                    onClick={() => handleQuickDemoCustomer('ksharvan2007@gmail.com', 'BK-20261020-655R')}
                     id="btn-demo-customer-1"
                   >
-                    Sharvan Kotharu (2 bookings)
+                    Sharvan Kotharu (BK-20261020-655R)
                   </button>
                   <button
                     type="button"
                     className="btn-demo-customer-pill"
-                    onClick={() => handleQuickDemoCustomer('livetest@voyara.com')}
+                    onClick={() => handleQuickDemoCustomer('livetest@voyara.com', 'BK-20261020-Z3T3')}
                     id="btn-demo-customer-2"
                   >
-                    Live Test User (1 booking)
+                    Live Test User (BK-20261020-Z3T3)
                   </button>
                 </div>
               </div>

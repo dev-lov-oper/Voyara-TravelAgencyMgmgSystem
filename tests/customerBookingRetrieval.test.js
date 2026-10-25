@@ -263,6 +263,27 @@ describe('TAMS-37: Customer Booking Records & Status Retrieval', () => {
       expect(response.body.success).toBe(false);
       expect(response.body.message).toContain('permission');
     });
+
+    it('rejects unauthenticated access to GET /api/bookings/:reference with HTTP 401', async () => {
+      const victimBooking = createBooking(db, {
+        packageId: 'pkg-3',
+        fullName: 'Victim Customer',
+        email: 'victim3@traveler.com',
+        phone: '+91 98765 33333',
+        travelerCount: 1,
+        travelDate: '2027-09-01',
+        totalPrice: 8999,
+      });
+
+      const response = await executeApiRequest({
+        method: 'GET',
+        url: `/api/bookings/${victimBooking.bookingReference}`,
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Authentication required');
+    });
   });
 
   describe('3. Required Booking Fields & Accurate Data Mapping', () => {
@@ -375,8 +396,8 @@ describe('TAMS-37: Customer Booking Records & Status Retrieval', () => {
   });
 
   describe('6. Customer Login Endpoint (POST /api/auth/customer-session)', () => {
-    it('authenticates customer with valid registered email and returns token', async () => {
-      createBooking(db, {
+    it('authenticates customer with valid registered email and matching booking reference', async () => {
+      const booking = createBooking(db, {
         packageId: 'pkg-1',
         fullName: 'Session User',
         email: 'session.user@voyara.com',
@@ -389,7 +410,10 @@ describe('TAMS-37: Customer Booking Records & Status Retrieval', () => {
       const res = await executeApiRequest({
         method: 'POST',
         url: '/api/auth/customer-session',
-        body: { email: 'session.user@voyara.com' },
+        body: {
+          email: 'session.user@voyara.com',
+          bookingReference: booking.bookingReference,
+        },
       });
 
       expect(res.status).toBe(200);
@@ -404,11 +428,63 @@ describe('TAMS-37: Customer Booking Records & Status Retrieval', () => {
       expect(verified.email).toBe('session.user@voyara.com');
     });
 
+    it('rejects authentication with HTTP 400 when booking reference is missing (prevents unauthorized access by email only)', async () => {
+      createBooking(db, {
+        packageId: 'pkg-1',
+        fullName: 'Target Customer',
+        email: 'target.customer@voyara.com',
+        phone: '+91 98765 77777',
+        travelerCount: 2,
+        travelDate: '2027-04-15',
+        totalPrice: 25998,
+      });
+
+      // Attacker supplies victim email without booking reference
+      const res = await executeApiRequest({
+        method: 'POST',
+        url: '/api/auth/customer-session',
+        body: { email: 'target.customer@voyara.com' },
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toContain('booking reference is required');
+    });
+
+    it('rejects authentication with HTTP 403 when booking reference does not match customer email', async () => {
+      createBooking(db, {
+        packageId: 'pkg-1',
+        fullName: 'Target Customer',
+        email: 'target.customer@voyara.com',
+        phone: '+91 98765 77777',
+        travelerCount: 2,
+        travelDate: '2027-04-15',
+        totalPrice: 25998,
+      });
+
+      // Attacker supplies victim email with mismatched / fabricated booking reference
+      const res = await executeApiRequest({
+        method: 'POST',
+        url: '/api/auth/customer-session',
+        body: {
+          email: 'target.customer@voyara.com',
+          bookingReference: 'BK-MISMATCHED-9999',
+        },
+      });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toContain('does not match');
+    });
+
     it('rejects authentication when email is not registered in bookings', async () => {
       const res = await executeApiRequest({
         method: 'POST',
         url: '/api/auth/customer-session',
-        body: { email: 'unknown.traveler@voyara.com' },
+        body: {
+          email: 'unknown.traveler@voyara.com',
+          bookingReference: 'BK-20261020-XXXX',
+        },
       });
 
       expect(res.status).toBe(404);
@@ -420,7 +496,7 @@ describe('TAMS-37: Customer Booking Records & Status Retrieval', () => {
       const res = await executeApiRequest({
         method: 'POST',
         url: '/api/auth/customer-session',
-        body: { email: 'not-an-email' },
+        body: { email: 'not-an-email', bookingReference: 'BK-20261020-XXXX' },
       });
 
       expect(res.status).toBe(400);
