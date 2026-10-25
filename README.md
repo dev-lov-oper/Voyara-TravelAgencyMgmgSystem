@@ -283,7 +283,10 @@ Voyara-TravelAgencyMgmgSystem/
 ├── tests/
 │   ├── bookingBackend.test.js          # TAMS-34 database, migrations, API, validation & integration tests
 │   ├── bookingForm.test.js             # TAMS-33 booking form validation & UI tests
+│   ├── bookingStatus.test.js           # TAMS-36/TAMS-38 booking status interface & display tests
+│   ├── bookingValidationSubmission.test.js # TAMS-35 booking submission validation tests
 │   ├── budgetFilter.test.js            # TAMS-10 budget filter unit & integration tests
+│   ├── customerBookingRetrieval.test.js # TAMS-37/TAMS-38 customer authentication & data isolation tests
 │   ├── destinationSearch.test.js       # TAMS-24/TAMS-25 search interface & logic tests
 │   ├── packageDetails.test.js          # TAMS-11/TAMS-31/TAMS-32 package details tests
 │   └── packageListing.test.js          # TAMS-7/TAMS-8 data retrieval & state tests
@@ -311,8 +314,9 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-35:** Validate Booking Submission Workflow
 - [x] **TAMS-36:** Booking Status Interface (My Bookings UI)
 - [x] **TAMS-37:** Retrieve Booking Records and Status (Customer Authentication & Data Isolation)
+- [x] **TAMS-38:** Validate Booking Status Access
 - [x] **TAMS-12:** Booking Request Submission & Status Tracking
-- [ ] **TAMS-13:** Booking Status Tracking
+- [x] **TAMS-13:** Booking Status Tracking
 - [ ] **TAMS-14:** Agent Booking Confirmation & Rejection
 
 
