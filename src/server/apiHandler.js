@@ -7,12 +7,13 @@ import { runMigrations } from './db/migrations.js';
 import { getAllPackages, getPackageById } from './models/packageModel.js';
 import {
   handleCreateBooking,
-
   handleGetBookingByReference,
   handleCustomerLogin,
   handleGetCustomerBookings,
+  handleAgentLogin,
+  handleGetAgentBookings,
 } from './controllers/bookingController.js';
-import { authenticateCustomerRequest } from './auth.js';
+import { authenticateCustomerRequest, authenticateAgentRequest } from './auth.js';
 
 
 const initializedDbs = new WeakSet();
@@ -111,6 +112,38 @@ export async function handleApiRequest(req, res, db = null) {
         return;
       }
       const result = handleCustomerLogin(targetDb, body);
+      sendJson(result.status, result.body);
+      return;
+    }
+
+    // 0b. POST /api/auth/agent-session or /api/agent/login (Agent authentication session)
+    if (method === 'POST' && (pathname === '/api/auth/agent-session' || pathname === '/api/agent/login')) {
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (parseErr) {
+        sendJson(400, {
+          success: false,
+          message: parseErr.message || 'Malformed JSON in request body.',
+        });
+        return;
+      }
+      const result = handleAgentLogin(targetDb, body);
+      sendJson(result.status, result.body);
+      return;
+    }
+
+    // 0c. GET /api/agent/bookings (Agent dashboard - retrieve all customer bookings)
+    if (method === 'GET' && (pathname === '/api/agent/bookings' || pathname === '/api/agent/bookings/')) {
+      const authResult = authenticateAgentRequest(req);
+      if (!authResult.authenticated) {
+        sendJson(authResult.status || 401, {
+          success: false,
+          message: authResult.error || 'Agent authentication required to access bookings.',
+        });
+        return;
+      }
+      const result = handleGetAgentBookings(targetDb, authResult.agent);
       sendJson(result.status, result.body);
       return;
     }

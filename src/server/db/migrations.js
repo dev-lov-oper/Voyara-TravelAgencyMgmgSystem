@@ -99,25 +99,34 @@ export function seedDefaultUsersIfEmpty(db) {
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL DEFAULT 'voyara123',
         full_name TEXT,
+        role TEXT DEFAULT 'customer',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     `);
 
+    // Ensure role column exists if table was created by earlier migration
+    try {
+      db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'customer';");
+    } catch {
+      // Column already exists
+    }
+
     const insertUser = db.prepare(`
-      INSERT OR IGNORE INTO users (email, password, full_name)
-      VALUES (?, ?, ?)
+      INSERT OR IGNORE INTO users (email, password, full_name, role)
+      VALUES (?, ?, ?, ?)
     `);
 
-    insertUser.run('ksharvan2007@gmail.com', 'voyara123', 'Sharvan kotharu');
-    insertUser.run('livetest@voyara.com', 'voyara123', 'Live Test User');
+    insertUser.run('agent@voyara.com', 'agent123', 'Voyara Travel Agent', 'agent');
+    insertUser.run('ksharvan2007@gmail.com', 'voyara123', 'Sharvan kotharu', 'customer');
+    insertUser.run('livetest@voyara.com', 'voyara123', 'Live Test User', 'customer');
 
     // Auto-sync any existing customer bookings into users with default password
     try {
       const existingBookings = db.prepare('SELECT DISTINCT email, full_name FROM bookings WHERE email IS NOT NULL').all();
       for (const b of existingBookings) {
         if (b.email) {
-          insertUser.run(b.email.trim().toLowerCase(), 'voyara123', b.full_name || 'Traveler');
+          insertUser.run(b.email.trim().toLowerCase(), 'voyara123', b.full_name || 'Traveler', 'customer');
         }
       }
     } catch {

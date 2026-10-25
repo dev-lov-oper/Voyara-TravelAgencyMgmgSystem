@@ -315,10 +315,45 @@ Development tasks are tracked in Jira using epics, user stories, subtasks, and s
 - [x] **TAMS-36:** Booking Status Interface (My Bookings UI)
 - [x] **TAMS-37:** Retrieve Booking Records and Status (Customer Authentication & Data Isolation)
 - [x] **TAMS-38:** Validate Booking Status Access
+- [x] **TAMS-39:** Build Agent Booking Dashboard (Agent Booking Display, Metrics & Access Gate)
 - [x] **TAMS-12:** Booking Request Submission & Status Tracking
 - [x] **TAMS-13:** Booking Status Tracking
+- [ ] **TAMS-40:** Agent Booking Confirmation and Rejection (Action Handling)
+- [ ] **TAMS-41:** Validate Booking Status Transitions (Testing)
 - [ ] **TAMS-14:** Agent Booking Confirmation & Rejection
 
-
 ---
+
+## Agent Booking Dashboard (Jira Story: TAMS-39)
+
+### 1. Agent-Side Interface & Navigation
+- **Dedicated Route (`?view=agent`, `#agent-dashboard`):**
+  - Accessible via the **"Agent Portal"** navigation item in the header and footer.
+  - Dedicated view state with URL synchronization and browser history (`popstate`) support.
+  - Returns to the catalog seamlessly via "Return to Customer Portal".
+- **Agent Access Flow & Gate:**
+  - Enforces agent authentication barrier (`role: 'agent'`).
+  - Secure credential entry form (`agent@voyara.com` / `agent123`) with quick-fill demo helper.
+  - Server-side signature validation rejecting unauthenticated or customer-role tokens (401/403).
+  - Agent profile chip displaying logged-in agent details and "Sign Out" button.
+
+### 2. Comprehensive Booking Data Display
+- **All Required Data Model Attributes Supported:**
+  - **Booking Reference:** Clean code formatting with click-to-copy and clipboard feedback.
+  - **Customer Name:** Traveler full name.
+  - **Contact Details:** Clickable `mailto:` email and `tel:` phone links.
+  - **Travel Package Name:** Package title and destination tag.
+  - **Booking Date:** Formatted creation date (`createdAt`).
+  - **Travel Dates:** Formatted travel departure date (`travelDate`).
+  - **Number of Travelers:** Traveler count badge.
+  - **Total Price:** Formatted price in Indian Rupees (`₹`).
+  - **Current Booking Status:** Live status badge with visual indicator dots.
+
+### 3. Dual Layout & Filtering
+- **Table & Card Views:** Seamless layout toggle between dense structured table on desktop and card grid.
+- **Metric KPI Cards:** Live counters for Total Requests, Pending Review, Confirmed, and Rejected bookings.
+- **Status Filter Tabs:** One-click filtering by All, Pending, Confirmed, and Rejected.
+- **Real-Time Keyword Search:** Filters across reference, customer name, email, phone, and package.
+- **Asynchronous States:** Accessible loading skeleton (`role="status"`, `aria-busy="true"`), empty states, and error recovery.
+
 

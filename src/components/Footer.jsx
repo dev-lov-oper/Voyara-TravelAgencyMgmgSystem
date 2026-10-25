@@ -2,11 +2,25 @@ import React from 'react';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-export default function Footer({ onExploreClick }) {
+export default function Footer({ onExploreClick, onBookingsClick, onAgentClick }) {
 
   const handleNavClick = (e, sectionId) => {
     e.preventDefault();
-    if (sectionId === 'packages-section') {
+    if (sectionId === 'agent-dashboard') {
+      if (onAgentClick) {
+        onAgentClick();
+      } else {
+        const el = document.getElementById('agent-dashboard-heading') || document.getElementById('agent-auth-heading');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (sectionId === 'booking-status') {
+      if (onBookingsClick) {
+        onBookingsClick();
+      } else {
+        const el = document.getElementById('booking-status-heading') || document.getElementById('bookings-list');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (sectionId === 'packages-section') {
       if (onExploreClick) {
         onExploreClick();
       } else {
@@ -58,6 +72,23 @@ export default function Footer({ onExploreClick }) {
                   onClick={(e) => handleNavClick(e, 'packages-section')}
                 >
                   Explore Packages
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="#booking-status" 
+                  onClick={(e) => handleNavClick(e, 'booking-status')}
+                >
+                  My Bookings
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="#agent-dashboard" 
+                  id="footer-agent-dashboard"
+                  onClick={(e) => handleNavClick(e, 'agent-dashboard')}
+                >
+                  Agent Portal
                 </a>
               </li>
               <li>

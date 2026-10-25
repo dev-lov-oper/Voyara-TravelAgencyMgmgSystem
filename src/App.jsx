@@ -5,6 +5,7 @@ import PackageSection from './components/PackageSection';
 import PackageDetails from './components/PackageDetails';
 import BookingForm from './components/BookingForm';
 import BookingStatus from './components/BookingStatus';
+import AgentBookingDashboard from './components/AgentBookingDashboard';
 import Footer from './components/Footer';
 import { getTravelPackages } from './services/packageService';
 
@@ -13,12 +14,13 @@ export default function App({ initialView } = {}) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // View state: 'catalog' | 'bookings'
+  // View state: 'catalog' | 'bookings' | 'agent'
   const [currentView, setCurrentView] = useState(() => {
     if (initialView) return initialView;
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const viewParam = params.get('view');
+      if (viewParam === 'agent' || viewParam === 'agent-dashboard' || window.location.hash === '#agent-dashboard') return 'agent';
       if (viewParam === 'bookings' || viewParam === 'status') return 'bookings';
       if (window.location.hash === '#booking-status') return 'bookings';
     }
@@ -78,7 +80,13 @@ export default function App({ initialView } = {}) {
       const viewParam = params.get('view');
       setSelectedPackageId(pkgParam || null);
       setIsBooking(Boolean(pkgParam && (params.get('action') === 'book' || params.get('booking') === 'true')));
-      setCurrentView(viewParam === 'bookings' || viewParam === 'status' || window.location.hash === '#booking-status' ? 'bookings' : 'catalog');
+      if (viewParam === 'agent' || viewParam === 'agent-dashboard' || window.location.hash === '#agent-dashboard') {
+        setCurrentView('agent');
+      } else if (viewParam === 'bookings' || viewParam === 'status' || window.location.hash === '#booking-status') {
+        setCurrentView('bookings');
+      } else {
+        setCurrentView('catalog');
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -139,6 +147,21 @@ export default function App({ initialView } = {}) {
       url.searchParams.delete('action');
       url.searchParams.delete('booking');
       window.history.pushState({ view: 'bookings' }, '', url.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleNavigateToAgent = () => {
+    setSelectedPackageId(null);
+    setIsBooking(false);
+    setCurrentView('agent');
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', 'agent');
+      url.searchParams.delete('package');
+      url.searchParams.delete('action');
+      url.searchParams.delete('booking');
+      window.history.pushState({ view: 'agent' }, '', url.toString());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -211,12 +234,17 @@ export default function App({ initialView } = {}) {
       <Navbar
         onExploreClick={handleExploreScroll}
         onBookingsClick={handleNavigateToBookings}
-        activeView={currentView === 'bookings' ? 'bookings' : selectedPackageId ? 'package' : 'packages'}
+        onAgentClick={handleNavigateToAgent}
+        activeView={currentView === 'agent' ? 'agent' : currentView === 'bookings' ? 'bookings' : selectedPackageId ? 'package' : 'packages'}
       />
 
       {/* Main Content Area */}
       <main id="main-content" className="main-content">
-        {currentView === 'bookings' ? (
+        {currentView === 'agent' ? (
+          <AgentBookingDashboard
+            onExplorePackages={handleBackToListing}
+          />
+        ) : currentView === 'bookings' ? (
           <BookingStatus
             onExplorePackages={handleBackToListing}
             onViewPackage={handleOpenDetails}
@@ -265,7 +293,11 @@ export default function App({ initialView } = {}) {
       </main>
 
       {/* Footer */}
-      <Footer onExploreClick={handleExploreScroll} onBookingsClick={handleNavigateToBookings} />
+      <Footer
+        onExploreClick={handleExploreScroll}
+        onBookingsClick={handleNavigateToBookings}
+        onAgentClick={handleNavigateToAgent}
+      />
     </div>
   );
 

@@ -214,3 +214,87 @@ export function authenticateCustomerRequest(req, secret = AUTH_SECRET) {
     customer,
   };
 }
+
+/**
+ * Creates a signed agent authentication token with 'agent' role.
+ *
+ * @param {Object} agentData
+ * @param {string} agentData.email - Agent email address (required)
+ * @param {string} [agentData.fullName] - Agent full name
+ * @param {number} [expiresInMs] - Token validity duration in milliseconds
+ * @param {string} [secret] - Optional secret override for testing
+ * @returns {string} Signed token format: header.payload.signature
+ */
+export function createAgentToken(agentData, expiresInMs = TOKEN_EXPIRY_MS, secret = AUTH_SECRET) {
+  if (!agentData || !agentData.email || typeof agentData.email !== 'string') {
+    throw new Error('Valid agent email is required to create an agent auth token.');
+  }
+
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT',
+  };
+
+  const now = Date.now();
+  const payload = {
+    email: agentData.email.trim().toLowerCase(),
+    fullName: (agentData.fullName || 'Voyara Travel Agent').trim(),
+    role: 'agent',
+    iat: now,
+    exp: now + expiresInMs,
+  };
+
+  const encodedHeader = base64UrlEncode(JSON.stringify(header));
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const signature = signData(`${encodedHeader}.${encodedPayload}`, secret);
+
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+/**
+ * Verifies and decodes an agent authentication token.
+ * Rejects tokens that do not have the 'agent' role.
+ *
+ * @param {string} token
+ * @param {string} [secret]
+ * @returns {Object|null} Decoded agent payload if valid and role is agent, null otherwise
+ */
+export function verifyAgentToken(token, secret = AUTH_SECRET) {
+  const payload = verifyCustomerToken(token, secret);
+  if (!payload) return null;
+  if (payload.role !== 'agent') return null;
+  return payload;
+}
+
+/**
+ * Authenticates an incoming agent HTTP request.
+ *
+ * @param {import('node:http').IncomingMessage|Object} req
+ * @param {string} [secret]
+ * @returns {{ authenticated: boolean, agent?: Object, status?: number, error?: string }}
+ */
+export function authenticateAgentRequest(req, secret = AUTH_SECRET) {
+  const token = extractAuthToken(req);
+
+  if (!token) {
+    return {
+      authenticated: false,
+      status: 401,
+      error: 'Agent authentication required. Please provide a valid agent authorization token in the Authorization header.',
+    };
+  }
+
+  const agent = verifyAgentToken(token, secret);
+  if (!agent) {
+    return {
+      authenticated: false,
+      status: 403,
+      error: 'Access denied. Valid travel agent credentials are required to access this resource.',
+    };
+  }
+
+  return {
+    authenticated: true,
+    agent,
+  };
+}

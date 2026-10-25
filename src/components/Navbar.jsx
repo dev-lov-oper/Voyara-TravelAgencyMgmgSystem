@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function Navbar({ onExploreClick, onBookingsClick, activeView }) {
+export default function Navbar({ onExploreClick, onBookingsClick, onAgentClick, activeView }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
@@ -14,7 +14,14 @@ export default function Navbar({ onExploreClick, onBookingsClick, activeView }) 
   const handleNavClick = (e, sectionId) => {
     e.preventDefault();
     closeMobileMenu();
-    if (sectionId === 'booking-status') {
+    if (sectionId === 'agent-dashboard') {
+      if (onAgentClick) {
+        onAgentClick();
+      } else {
+        const el = document.getElementById('agent-dashboard-heading') || document.getElementById('agent-auth-heading');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (sectionId === 'booking-status') {
       if (onBookingsClick) {
         onBookingsClick();
       } else {
@@ -29,7 +36,7 @@ export default function Navbar({ onExploreClick, onBookingsClick, activeView }) 
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }
     } else if (sectionId === 'hero-section') {
-      if (onExploreClick && activeView === 'bookings') {
+      if (onExploreClick && (activeView === 'bookings' || activeView === 'agent')) {
         onExploreClick();
       } else {
         const el = document.getElementById('hero-section');
@@ -89,6 +96,16 @@ export default function Navbar({ onExploreClick, onBookingsClick, activeView }) 
                 onClick={(e) => handleNavClick(e, 'booking-status')}
               >
                 My Bookings
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#agent-dashboard" 
+                className={`nav-link ${activeView === 'agent' ? 'active' : ''}`}
+                id="nav-agent-dashboard"
+                onClick={(e) => handleNavClick(e, 'agent-dashboard')}
+              >
+                Agent Portal
               </a>
             </li>
             <li>
@@ -163,6 +180,16 @@ export default function Navbar({ onExploreClick, onBookingsClick, activeView }) 
                 onClick={(e) => handleNavClick(e, 'booking-status')}
               >
                 My Bookings
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#agent-dashboard" 
+                className={`mobile-nav-link ${activeView === 'agent' ? 'active' : ''}`}
+                id="mobile-nav-agent-dashboard"
+                onClick={(e) => handleNavClick(e, 'agent-dashboard')}
+              >
+                Agent Portal
               </a>
             </li>
             <li>

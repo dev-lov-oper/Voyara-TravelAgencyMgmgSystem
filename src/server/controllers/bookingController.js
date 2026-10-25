@@ -10,8 +10,8 @@ import {
   isValidTravelDate,
 } from '../../utils/bookingValidation.js';
 import { getPackageById } from '../models/packageModel.js';
-import { createBooking, getBookingByReference, getBookingsByCustomer } from '../models/bookingModel.js';
-import { createCustomerToken } from '../auth.js';
+import { createBooking, getBookingByReference, getBookingsByCustomer, getAllBookings } from '../models/bookingModel.js';
+import { createCustomerToken, createAgentToken } from '../auth.js';
 import { createUser, getUserByEmail } from '../models/userModel.js';
 
 
@@ -370,4 +370,143 @@ export function handleGetCustomerBookings(db, authenticatedCustomer) {
     },
   };
 }
+
+/**
+ * Handles agent authentication / login via registered agent email and password.
+ * Returns a signed token scoped with role: 'agent'.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {Object} credentials
+ * @returns {{ status: number, body: Object }}
+ */
+export function handleAgentLogin(db, credentials) {
+  if (!credentials || typeof credentials !== 'object') {
+    return {
+      status: 400,
+      body: { success: false, message: 'Invalid agent login request payload.' },
+    };
+  }
+
+  const email = (credentials.email || '').trim().toLowerCase();
+  if (!email || !isValidEmail(email)) {
+    return {
+      status: 400,
+      body: { success: false, message: 'A valid agent email address is required.' },
+    };
+  }
+
+  const password = typeof credentials.password === 'string' ? credentials.password.trim() : '';
+  if (!password) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        message: 'Password is required to sign in as an agent.',
+        errors: {
+          password: 'Password is required.',
+        },
+      },
+    };
+  }
+
+  let user = getUserByEmail(db, email);
+
+  // Auto-seed default agent account if agent@voyara.com is used
+  if (!user && email === 'agent@voyara.com') {
+    user = createUser(db, {
+      email: 'agent@voyara.com',
+      password: 'agent123',
+      fullName: 'Voyara Travel Agent',
+      role: 'agent',
+    });
+  }
+
+  if (!user) {
+    return {
+      status: 404,
+      body: {
+        success: false,
+        message: `Agent account '${email}' was not found. Please contact an administrator.`,
+      },
+    };
+  }
+
+  // Verify password
+  if (user.password !== password) {
+    return {
+      status: 401,
+      body: {
+        success: false,
+        message: 'Invalid agent credentials. Please check your email and password.',
+      },
+    };
+  }
+
+  // Verify role
+  if (user.role !== 'agent') {
+    return {
+      status: 403,
+      body: {
+        success: false,
+        message: 'Access denied. The provided credentials do not have agent permissions.',
+      },
+    };
+  }
+
+  const fullName = user.full_name || 'Voyara Travel Agent';
+  const token = createAgentToken({
+    email,
+    fullName,
+  });
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      message: 'Agent authentication successful.',
+      token,
+      agent: {
+        email,
+        fullName,
+        role: 'agent',
+      },
+    },
+  };
+}
+
+/**
+ * Handles retrieving all customer bookings for the agent dashboard.
+ * Requires authenticated agent credentials.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {Object} authenticatedAgent
+ * @returns {{ status: number, body: Object }}
+ */
+export function handleGetAgentBookings(db, authenticatedAgent) {
+  if (!authenticatedAgent || authenticatedAgent.role !== 'agent') {
+    return {
+      status: 403,
+      body: {
+        success: false,
+        message: 'Agent authentication required to access agent dashboard bookings.',
+      },
+    };
+  }
+
+  const bookings = getAllBookings(db);
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      agent: {
+        email: authenticatedAgent.email,
+        fullName: authenticatedAgent.fullName || 'Voyara Travel Agent',
+      },
+      bookings,
+      total: bookings.length,
+    },
+  };
+}
+
 
