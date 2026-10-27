@@ -4,6 +4,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import DestinationSearch from '../src/components/DestinationSearch.jsx';
 import PackageSection from '../src/components/PackageSection.jsx';
 import { SAMPLE_PACKAGES } from '../src/data/packages.js';
+import { getDatabase, closeDatabase } from '../src/server/db/database.js';
+import { runMigrations } from '../src/server/db/migrations.js';
+import { getAllPackages } from '../src/server/models/packageModel.js';
+import { handleApiRequest } from '../src/server/apiHandler.js';
 
 describe('TAMS-24: Destination Search Interface Validation', () => {
 
@@ -40,9 +44,41 @@ describe('TAMS-24: Destination Search Interface Validation', () => {
     expect(html).toContain('type="button"');
   });
 
+  it('renders explicit Clear Search action button when search text is present', () => {
+    const html = renderToStaticMarkup(React.createElement(DestinationSearch, { value: 'Goa' }));
+    expect(html).toContain('id="clear-search-btn"');
+    expect(html).toContain('class="destination-clear-btn"');
+    expect(html).toContain('Clear Search');
+  });
+
+  it('does NOT render explicit Clear Search action button when input is empty', () => {
+    const html = renderToStaticMarkup(React.createElement(DestinationSearch, { value: '' }));
+    expect(html).not.toContain('id="clear-search-btn"');
+    expect(html).not.toContain('destination-clear-btn');
+  });
+
+  it('renders explicit Search action button with submit type and label', () => {
+    const html = renderToStaticMarkup(React.createElement(DestinationSearch));
+    expect(html).toContain('id="search-destination-btn"');
+    expect(html).toContain('class="destination-search-btn"');
+    expect(html).toContain('type="submit"');
+    expect(html).toContain('Search');
+  });
+
   it('renders container with search landmark role for accessibility', () => {
     const html = renderToStaticMarkup(React.createElement(DestinationSearch));
     expect(html).toContain('role="search"');
+  });
+
+  it('renders Clear Search button in PackageSection toolbar when initialSearchQuery is provided', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(PackageSection, { 
+        packages: SAMPLE_PACKAGES, 
+        initialSearchQuery: 'Kerala' 
+      })
+    );
+    expect(html).toContain('id="clear-search-btn"');
+    expect(html).toContain('Clear Search');
   });
 
 });
@@ -130,6 +166,86 @@ describe('TAMS-25: Destination Search Logic & Filtering Validation', () => {
 
     // Note: When packages exist but search returns 0 matches,
     // the UI renders "No packages found for this destination."
+  });
+
+  it('10. PackageSection renders Quick Destination Filter chips for available destinations', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(PackageSection, { packages: SAMPLE_PACKAGES })
+    );
+    expect(html).toContain('destination-quick-pills');
+    expect(html).toContain('All Destinations');
+    expect(html).toContain('Goa');
+    expect(html).toContain('Manali');
+    expect(html).toContain('Jaipur');
+    expect(html).toContain('Kerala');
+    expect(html).toContain('Kashmir');
+    expect(html).toContain('Andaman');
+  });
+
+  it('11. Backend packageModel filters packages by destination query', () => {
+    const memDb = getDatabase({ memory: true });
+    runMigrations(memDb);
+
+    try {
+      // Filter for Goa
+      const goaPkgs = getAllPackages(memDb, { destination: 'Goa' });
+      expect(goaPkgs.length).toBe(1);
+      expect(goaPkgs[0].destination).toBe('Goa');
+
+      // Case-insensitive & partial match
+      const manaliPkgs = getAllPackages(memDb, { destination: 'mAn' });
+      expect(manaliPkgs.length).toBe(2); // Manali and Andaman
+      const destNames = manaliPkgs.map(p => p.destination);
+      expect(destNames).toContain('Manali');
+      expect(destNames).toContain('Andaman');
+
+      // Empty or non-matching query
+      const nonMatching = getAllPackages(memDb, { destination: 'Iceland' });
+      expect(nonMatching.length).toBe(0);
+
+      const allPkgs = getAllPackages(memDb, { destination: '' });
+      expect(allPkgs.length).toBe(6);
+    } finally {
+      closeDatabase(memDb);
+    }
+  });
+
+  it('12. API handler GET /api/packages filters packages by ?destination query param', async () => {
+    const memDb = getDatabase({ memory: true });
+    runMigrations(memDb);
+
+    try {
+      let responseStatusCode = null;
+      let responseHeaders = {};
+      let responseBody = '';
+
+      const fakeReq = {
+        method: 'GET',
+        url: '/api/packages?destination=Kashmir',
+        headers: {},
+      };
+
+      const fakeRes = {
+        writeHead: (code, headers) => {
+          responseStatusCode = code;
+          responseHeaders = headers;
+        },
+        end: (payload) => {
+          responseBody = payload;
+        },
+      };
+
+      await handleApiRequest(fakeReq, fakeRes, memDb);
+
+      expect(responseStatusCode).toBe(200);
+      expect(responseHeaders['Content-Type']).toBe('application/json');
+      const parsed = JSON.parse(responseBody);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed.length).toBe(1);
+      expect(parsed[0].destination).toBe('Kashmir');
+    } finally {
+      closeDatabase(memDb);
+    }
   });
 
 });

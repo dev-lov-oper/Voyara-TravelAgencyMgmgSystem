@@ -90,6 +90,29 @@ export default function BudgetFilter({
     }
   };
 
+  const handleBlur = () => {
+    const trimmedMin = minInput.trim();
+    const trimmedMax = maxInput.trim();
+
+    if (trimmedMin === '' && trimmedMax === '') {
+      if (minBudget !== null || maxBudget !== null) {
+        if (onClear) onClear();
+      }
+      return;
+    }
+
+    const minVal = trimmedMin !== '' ? Number(trimmedMin) : null;
+    const maxVal = trimmedMax !== '' ? Number(trimmedMax) : null;
+
+    if (minVal !== null && (isNaN(minVal) || minVal < 0)) return;
+    if (maxVal !== null && (isNaN(maxVal) || maxVal < 0)) return;
+    if (minVal !== null && maxVal !== null && minVal > maxVal) return;
+
+    if (onApply) {
+      onApply({ min: minVal, max: maxVal });
+    }
+  };
+
   const isMinError = Boolean(
     errorMessage &&
       (errorMessage.toLowerCase().includes('minimum') || errorMessage.includes('cannot exceed'))
@@ -130,6 +153,7 @@ export default function BudgetFilter({
                   setMinInput(e.target.value);
                   if (errorMessage) setErrorMessage('');
                 }}
+                onBlur={handleBlur}
                 aria-invalid={isMinError}
                 aria-describedby={errorMessage ? 'budget-filter-error' : undefined}
               />
@@ -158,6 +182,7 @@ export default function BudgetFilter({
                   setMaxInput(e.target.value);
                   if (errorMessage) setErrorMessage('');
                 }}
+                onBlur={handleBlur}
                 aria-invalid={isMaxError}
                 aria-describedby={errorMessage ? 'budget-filter-error' : undefined}
               />

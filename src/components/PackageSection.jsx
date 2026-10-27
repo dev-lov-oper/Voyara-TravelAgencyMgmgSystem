@@ -49,6 +49,19 @@ export default function PackageSection({
   const effectiveError = isSimulatedError ? 'Simulated API network failure. (Click "Try Again" to verify recovery).' : error;
   const displayPackages = isSimulatedEmpty ? [] : packages;
 
+  // Extract unique available destinations for quick filtering chips
+  const availableDestinations = [];
+  const seenDests = new Set();
+  (displayPackages || []).forEach((p) => {
+    if (p && p.destination && typeof p.destination === 'string' && p.destination.trim()) {
+      const dest = p.destination.trim();
+      if (!seenDests.has(dest)) {
+        seenDests.add(dest);
+        availableDestinations.push(dest);
+      }
+    }
+  });
+
   // Destination Search logic (TAMS-25): trimmed, case-insensitive substring
   const trimmedQuery = searchQuery.trim().toLowerCase();
 
@@ -80,21 +93,55 @@ export default function PackageSection({
   const handleSearchChange = (val) => {
     setSearchQuery(val);
     if (onSearchChange) onSearchChange(val);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (val && val.trim()) {
+        url.searchParams.set('search', val.trim());
+      } else {
+        url.searchParams.delete('search');
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
     if (onSearchChange) onSearchChange('');
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('search');
+      window.history.replaceState({}, '', url.toString());
+    }
   };
 
   const handleApplyBudget = ({ min, max }) => {
     setAppliedBudget({ min, max });
     if (onBudgetChange) onBudgetChange({ min, max });
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (min !== null && min !== undefined) {
+        url.searchParams.set('minBudget', String(min));
+      } else {
+        url.searchParams.delete('minBudget');
+      }
+      if (max !== null && max !== undefined) {
+        url.searchParams.set('maxBudget', String(max));
+      } else {
+        url.searchParams.delete('maxBudget');
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
   };
 
   const handleClearBudget = () => {
     setAppliedBudget({ min: null, max: null });
     if (onBudgetChange) onBudgetChange({ min: null, max: null });
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('minBudget');
+      url.searchParams.delete('maxBudget');
+      window.history.replaceState({}, '', url.toString());
+    }
   };
 
   const handleResetAllFilters = () => {
@@ -102,6 +149,13 @@ export default function PackageSection({
     setAppliedBudget({ min: null, max: null });
     if (onSearchChange) onSearchChange('');
     if (onBudgetChange) onBudgetChange({ min: null, max: null });
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('search');
+      url.searchParams.delete('minBudget');
+      url.searchParams.delete('maxBudget');
+      window.history.replaceState({}, '', url.toString());
+    }
   };
 
   const hasAnyFilterActive = Boolean(trimmedQuery || hasMinBudget || hasMaxBudget);
@@ -159,7 +213,40 @@ export default function PackageSection({
             <DestinationSearch 
               value={searchQuery}
               onChange={handleSearchChange}
+              onSearch={handleSearchChange}
+              onClear={handleClearSearch}
             />
+
+            {/* Popular Destination Quick Filter Chips */}
+            {availableDestinations.length > 0 && (
+              <div className="destination-quick-pills" role="group" aria-label="Quick destination filters">
+                <span className="quick-filter-label">Quick Destination Filters:</span>
+                <div className="quick-pills-list">
+                  <button
+                    type="button"
+                    className={`destination-chip ${!trimmedQuery ? 'is-active' : ''}`}
+                    onClick={handleClearSearch}
+                    aria-pressed={!trimmedQuery}
+                  >
+                    All Destinations
+                  </button>
+                  {availableDestinations.map((dest) => {
+                    const isSelected = trimmedQuery === dest.toLowerCase();
+                    return (
+                      <button
+                        key={dest}
+                        type="button"
+                        className={`destination-chip ${isSelected ? 'is-active' : ''}`}
+                        onClick={() => handleSearchChange(isSelected ? '' : dest)}
+                        aria-pressed={isSelected}
+                      >
+                        {dest}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           <div className="section-budget-filter">
             <BudgetFilter 

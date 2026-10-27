@@ -230,7 +230,15 @@ export async function handleApiRequest(req, res, db = null) {
 
     // 1. GET /api/packages
     if (method === 'GET' && (pathname === '/api/packages' || pathname === '/api/packages/')) {
-      const packages = getAllPackages(targetDb, { activeOnly: true });
+      const destinationParam = urlObj.searchParams.get('destination') || urlObj.searchParams.get('search');
+      const minBudgetParam = urlObj.searchParams.get('minBudget') || urlObj.searchParams.get('min');
+      const maxBudgetParam = urlObj.searchParams.get('maxBudget') || urlObj.searchParams.get('max');
+      const packages = getAllPackages(targetDb, { 
+        activeOnly: true,
+        destination: destinationParam,
+        minBudget: minBudgetParam,
+        maxBudget: maxBudgetParam,
+      });
       sendJson(200, packages);
       return;
     }

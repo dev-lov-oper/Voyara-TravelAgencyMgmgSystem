@@ -4,6 +4,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import BudgetFilter from '../src/components/BudgetFilter.jsx';
 import PackageSection from '../src/components/PackageSection.jsx';
 import { SAMPLE_PACKAGES } from '../src/data/packages.js';
+import { getDatabase, closeDatabase } from '../src/server/db/database.js';
+import { runMigrations } from '../src/server/db/migrations.js';
+import { getAllPackages } from '../src/server/models/packageModel.js';
+import { handleApiRequest } from '../src/server/apiHandler.js';
 
 describe('TAMS-10: Budget Filter Interface & Accessibility Validation', () => {
 
@@ -292,6 +296,92 @@ describe('TAMS-10: PackageSection UI Integration Validation', () => {
     );
     expect(html).toContain('Unable to connect to server');
     expect(html).toContain('Try Again');
+  });
+
+  it('renders matching packages when both destination query and budget range are provided', () => {
+    // "man" matches Manali (18499) and Andaman (26499). Budget max 20000 filters to only Manali.
+    const html = renderToStaticMarkup(
+      React.createElement(PackageSection, {
+        packages: SAMPLE_PACKAGES,
+        initialSearchQuery: 'man',
+        initialMaxBudget: 20000,
+      })
+    );
+    expect(html).toContain('Himalayan Retreat');
+    expect(html).toContain('Manali');
+    expect(html).not.toContain('Island Discovery');
+    expect(html).not.toContain('Coastal Escape');
+  });
+
+  it('backend model filters packages by both destination and budget range simultaneously', () => {
+    const memDb = getDatabase({ memory: true });
+    runMigrations(memDb);
+
+    try {
+      // Both match: "Goa" with budget between 10000 and 15000 -> Coastal Escape (12999)
+      const goaWithinBudget = getAllPackages(memDb, {
+        destination: 'Goa',
+        minBudget: 10000,
+        maxBudget: 15000,
+      });
+      expect(goaWithinBudget.length).toBe(1);
+      expect(goaWithinBudget[0].title).toBe('Coastal Escape');
+
+      // Mismatch: "Goa" with budget min 15000 -> 0 results
+      const goaOverBudget = getAllPackages(memDb, {
+        destination: 'Goa',
+        minBudget: 15000,
+      });
+      expect(goaOverBudget.length).toBe(0);
+
+      // "man" (Manali 18499, Andaman 26499) with minBudget 20000 -> only Andaman
+      const manAbove20k = getAllPackages(memDb, {
+        destination: 'man',
+        minBudget: 20000,
+      });
+      expect(manAbove20k.length).toBe(1);
+      expect(manAbove20k[0].destination).toBe('Andaman');
+    } finally {
+      closeDatabase(memDb);
+    }
+  });
+
+  it('backend API GET /api/packages filters packages by destination and budget parameters together', async () => {
+    const memDb = getDatabase({ memory: true });
+    runMigrations(memDb);
+
+    try {
+      let responseStatusCode = null;
+      let responseHeaders = {};
+      let responseBody = '';
+
+      const fakeReq = {
+        method: 'GET',
+        url: '/api/packages?destination=man&maxBudget=20000',
+        headers: {},
+      };
+
+      const fakeRes = {
+        writeHead: (code, headers) => {
+          responseStatusCode = code;
+          responseHeaders = headers;
+        },
+        end: (payload) => {
+          responseBody = payload;
+        },
+      };
+
+      await handleApiRequest(fakeReq, fakeRes, memDb);
+
+      expect(responseStatusCode).toBe(200);
+      expect(responseHeaders['Content-Type']).toBe('application/json');
+      const parsed = JSON.parse(responseBody);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed.length).toBe(1);
+      expect(parsed[0].destination).toBe('Manali');
+    } finally {
+      closeDatabase(memDb);
+    }
   });
 
 });

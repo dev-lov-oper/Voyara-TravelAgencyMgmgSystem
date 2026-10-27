@@ -25,18 +25,44 @@ function deserializePackage(row) {
 }
 
 /**
- * Retrieves all packages from the database.
+ * Retrieves all packages from the database with optional filtering.
  *
  * @param {import('node:sqlite').DatabaseSync} db
  * @param {Object} [options]
  * @param {boolean} [options.activeOnly=true]
+ * @param {string} [options.destination=null]
+ * @param {number|string|null} [options.minBudget=null]
+ * @param {number|string|null} [options.maxBudget=null]
  * @returns {Array<Object>}
  */
-export function getAllPackages(db, { activeOnly = true } = {}) {
-  const query = activeOnly
-    ? 'SELECT * FROM packages WHERE is_active = 1 ORDER BY price ASC'
-    : 'SELECT * FROM packages ORDER BY price ASC';
-  const rows = db.prepare(query).all();
+export function getAllPackages(db, { activeOnly = true, destination = null, minBudget = null, maxBudget = null } = {}) {
+  let query = 'SELECT * FROM packages WHERE 1=1';
+  const params = [];
+
+  if (activeOnly) {
+    query += ' AND is_active = 1';
+  }
+
+  if (destination && destination.trim()) {
+    query += ' AND LOWER(destination) LIKE ?';
+    params.push(`%${destination.trim().toLowerCase()}%`);
+  }
+
+  const numMin = minBudget !== null && minBudget !== '' && !isNaN(Number(minBudget)) ? Number(minBudget) : null;
+  const numMax = maxBudget !== null && maxBudget !== '' && !isNaN(Number(maxBudget)) ? Number(maxBudget) : null;
+
+  if (numMin !== null) {
+    query += ' AND price >= ?';
+    params.push(numMin);
+  }
+
+  if (numMax !== null) {
+    query += ' AND price <= ?';
+    params.push(numMax);
+  }
+
+  query += ' ORDER BY price ASC';
+  const rows = db.prepare(query).all(...params);
   return rows.map(deserializePackage);
 }
 
